@@ -72,14 +72,14 @@ const Home = () => {
   return (
     <Box sx={{ overflowX: 'hidden', pb: { xs: 'calc(64px + env(safe-area-inset-bottom, 0px))', md: 0 } }}>
         <PublicNavbar />
-        <HeroSection heroWords={heroWords} eventStartDate={eventStartDate} />
+        <HeroSection eventStartDate={eventStartDate} />
         <UpcomingEventsScroller events={events} />
-        <AboutSection highlights={highlights} />
-        <StatsSection stats={stats} />
+        <AboutSection />
+        <StatsSection />
         <FeaturedEvents events={events} />
         {/*<EventsSection events={events} departments={departments} />*/}
         <ScheduleSection scheduleDays={scheduleDays} />
-        <TestimonialsSection testimonials={testimonials} />
+        <TestimonialsSection />
         <SponsorsSection sponsors={sponsors} />
         {/*<CTABanner />*/}
         <PublicFooter />

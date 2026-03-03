@@ -10,6 +10,8 @@ import Divider from '@mui/material/Divider'
 import LinearProgress from '@mui/material/LinearProgress'
 import Skeleton from '@mui/material/Skeleton'
 import useMediaQuery from '@mui/material/useMediaQuery'
+import Collapse from '@mui/material/Collapse'
+import IconButton from '@mui/material/IconButton'
 import { alpha } from '@mui/material/styles'
 import { useAppPalette } from 'src/components/palette'
 import { motion } from 'framer-motion'
@@ -46,6 +48,8 @@ function formatTime(iso) {
 }
 
 function getEventImage(event) {
+  // Prefer legacy images array for event images
+  // (event_details.document_url is for the rules/info document, not images)
   if (event?.images && Array.isArray(event.images) && event.images.length > 0) {
     const img = event.images[0]
     return typeof img === 'string' ? img : img?.url || null
@@ -54,17 +58,20 @@ function getEventImage(event) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- *  Countdown hook
+ *  Countdown hook — always counts down to the festival start date
  * ═════════════════════════════════════════════════════════════════════════ */
-function useCountdown(targetIso) {
+const FEST_START = new Date('2026-04-07T09:00:00').getTime()
+
+function useCountdown() {
   const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 })
 
   useEffect(() => {
-    if (!targetIso) return
-    const target = new Date(targetIso).getTime()
     const tick = () => {
-      const diff = target - Date.now()
-      if (diff <= 0) { setTimeLeft({ d: 0, h: 0, m: 0, s: 0 }); return }
+      const diff = FEST_START - Date.now()
+      if (diff <= 0) {
+        setTimeLeft({ d: 0, h: 0, m: 0, s: 0 })
+        return
+      }
       setTimeLeft({
         d: Math.floor(diff / 86400000),
         h: Math.floor((diff % 86400000) / 3600000),
@@ -75,7 +82,7 @@ function useCountdown(targetIso) {
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [targetIso])
+  }, [])
 
   return timeLeft
 }
@@ -187,7 +194,7 @@ export default function EventDetailView() {
   const { data: session } = useSession()
   const { id } = router.query
   const { currentEvent: event, currentEventLoading: loading, currentEventError } = useSelector(state => state.events)
-  const timeLeft = useCountdown(event?.start_time)
+  const timeLeft = useCountdown()
   const isMobile = useMediaQuery(c.theme.breakpoints.down('md'))
 
   useEffect(() => {
@@ -224,6 +231,7 @@ export default function EventDetailView() {
   const spotsLeft = event.seats - (event.registered || 0)
   const imageUrl = getEventImage(event)
   const isOver = event.start_time ? new Date(event.start_time).getTime() <= Date.now() : false
+  const details = event.details || {}
 
   return (
     <Box
@@ -420,7 +428,7 @@ export default function EventDetailView() {
                 })
               }
               if (event.venue) rows.push({ label: 'Venue', value: event.venue })
-              if (event.prize) rows.push({ label: 'Prize Pool', value: event.prize })
+              if (details.team_size) rows.push({ label: 'Team Size', value: `${details.team_size} member${details.team_size !== 1 ? 's' : ''}` })
               if (event.ticket_price > 0) rows.push({ label: 'Entry Fee', value: `₹${parseFloat(event.ticket_price).toLocaleString('en-IN')}` })
 
               if (rows.length === 0) return null
@@ -476,47 +484,7 @@ export default function EventDetailView() {
               )
             })()}
 
-            {/* ── Registration fill ── */}
-            {event.seats > 0 && (
-              <InfoSection label='Registration'>
-                <Box sx={{ mt: 0.5 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.25 }}>
-                    <Typography variant='body2' sx={{ fontWeight: 700, color: 'text.primary' }}>
-                      {event.registered || 0} / {event.seats} registered
-                    </Typography>
-                    <Typography
-                      variant='body2'
-                      sx={{ fontWeight: 800, color: almostFull ? c.error : color }}
-                    >
-                      {fillPct}%
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant='determinate'
-                    value={fillPct}
-                    sx={{
-                      height: 6,
-                      borderRadius: 4,
-                      bgcolor: c.dividerA30,
-                      '& .MuiLinearProgress-bar': {
-                        borderRadius: 4,
-                        background: almostFull
-                          ? `linear-gradient(90deg, ${c.warning}, ${c.error})`
-                          : `linear-gradient(90deg, ${color}, ${alpha(color, 0.55)})`
-                      }
-                    }}
-                  />
-                  {almostFull && (
-                    <Typography
-                      variant='caption'
-                      sx={{ color: c.error, fontWeight: 700, mt: 0.75, display: 'block' }}
-                    >
-                      {spotsLeft <= 0 ? 'Sold Out!' : `Only ${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left!`}
-                    </Typography>
-                  )}
-                </Box>
-              </InfoSection>
-            )}
+           
 
             {/* ── Description ── */}
             {event.description && (
@@ -538,6 +506,146 @@ export default function EventDetailView() {
                 >
                   {event.description}
                 </Typography>
+              </Box>
+            )}
+
+            {/* ── Brief ── */}
+            {details.brief && (
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant='overline'
+                  sx={{ color, fontWeight: 700, letterSpacing: '0.12em', mb: 1.5, display: 'block' }}
+                >
+                  Brief
+                </Typography>
+                <Typography
+                  variant='body1'
+                  sx={{
+                    color: 'text.secondary',
+                    lineHeight: 1.85,
+                    fontSize: '0.95rem',
+                    whiteSpace: 'pre-line'
+                  }}
+                >
+                  {details.brief}
+                </Typography>
+              </Box>
+            )}
+
+            {/* ── Prizes ── */}
+            {details.prize && typeof details.prize === 'object' && Object.keys(details.prize).length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant='overline'
+                  sx={{ color, fontWeight: 700, letterSpacing: '0.12em', mb: 1.5, display: 'block' }}
+                >
+                  Prizes
+                </Typography>
+                <Box component='ul' sx={{ pl: 2.5, m: 0, listStyle: 'none' }}>
+                  {details.prize.total && (
+                    <Box
+                      component='li'
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 1.5,
+                        mb: 1.25
+                      }}
+                    >
+                      <Icon
+                        icon='tabler:trophy'
+                        fontSize={18}
+                        style={{ color, marginTop: 3, flexShrink: 0 }}
+                      />
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.6, fontWeight: 600 }}
+                      >
+                        Total Prize Pool: ₹{details.prize.total.toLocaleString('en-IN')}
+                      </Typography>
+                    </Box>
+                  )}
+                  {['1st', '2nd', '3rd'].map((place) => (
+                    details.prize[place] ? (
+                      <Box
+                        component='li'
+                        key={place}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 1.5,
+                          mb: 1.25
+                        }}
+                      >
+                        <Icon
+                          icon='tabler:trophy'
+                          fontSize={18}
+                          style={{ color, marginTop: 3, flexShrink: 0 }}
+                        />
+                        <Typography
+                          variant='body1'
+                          sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.6 }}
+                        >
+                          {place} Prize: ₹{details.prize[place].toLocaleString('en-IN')}
+                        </Typography>
+                      </Box>
+                    ) : null
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {/* ── Rules ── */}
+            {details.rules && details.rules.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant='overline'
+                  sx={{ color, fontWeight: 700, letterSpacing: '0.12em', mb: 1.5, display: 'block' }}
+                >
+                  Rules
+                </Typography>
+                <Box component='ol' sx={{ pl: 2.5, m: 0 }}>
+                  {details.rules.map((rule, i) => (
+                    <Box
+                      component='li'
+                      key={i}
+                      sx={{
+                        color: 'text.secondary',
+                        fontSize: '0.95rem',
+                        lineHeight: 1.75,
+                        mb: 0.75,
+                        '&::marker': { color, fontWeight: 700 }
+                      }}
+                    >
+                      {rule}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {/* ── Rounds ── */}
+            {details.rounds > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant='overline'
+                  sx={{ color, fontWeight: 700, letterSpacing: '0.12em', mb: 1.5, display: 'block' }}
+                >
+                  Rounds
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Icon
+                    icon='tabler:list-numbers'
+                    fontSize={20}
+                    style={{ color, flexShrink: 0 }}
+                  />
+                  <Typography
+                    variant='body1'
+                    sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.6 }}
+                  >
+                    {details.rounds} {details.rounds === 1 ? 'Round' : 'Rounds'}
+                  </Typography>
+                </Box>
               </Box>
             )}
 
@@ -568,6 +676,43 @@ export default function EventDetailView() {
                     />
                   ))}
                 </Box>
+              </Box>
+            )}
+
+            {/* ── Download Document ── */}
+            {details.document_url && (
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant='overline'
+                  sx={{ color, fontWeight: 700, letterSpacing: '0.12em', mb: 1.5, display: 'block' }}
+                >
+                  Event Document
+                </Typography>
+                <Button
+                  component='a'
+                  href={details.document_url}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  download
+                  variant='outlined'
+                  startIcon={<Icon icon='tabler:file-download' fontSize={18} />}
+                  sx={{
+                    borderRadius: '10px',
+                    borderColor: alpha(color, 0.5),
+                    color,
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    textTransform: 'none',
+                    px: 2.5,
+                    py: 1,
+                    '&:hover': {
+                      borderColor: color,
+                      bgcolor: alpha(color, 0.06)
+                    }
+                  }}
+                >
+                  Download Event Details
+                </Button>
               </Box>
             )}
 

@@ -173,6 +173,20 @@ CREATE INDEX idx_payments_booking_id      ON payments(booking_id);
 CREATE INDEX idx_payments_status          ON payments(status);
 CREATE INDEX idx_payments_idempotency_key ON payments(idempotency_key);
 
+-- ── Event Details (1:1 extension of events) ────────────────────────────────────
+CREATE TABLE event_details (
+    id              INT PRIMARY KEY,
+    event_id        BIGINT UNIQUE NOT NULL,
+    brief           TEXT,
+    rules           TEXT[]    NOT NULL DEFAULT '{}',
+    prize           JSONB     NOT NULL DEFAULT '{}'::jsonb,
+    evaluation_criteria TEXT[],
+    document_url    TEXT,
+    rounds          INT,
+    team_size       INT,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
 -- ── Migration tracking ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS _migrations (
     id         SERIAL PRIMARY KEY,

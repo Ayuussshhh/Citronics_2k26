@@ -146,11 +146,12 @@ const eventService = {
   },
 
   /**
-   * Single event by ID with full details + department info.
+   * Single event by ID with full details + department info + event_details.
    * Only returns publicly visible (published) events.
+   * Merges event_details into a nested `details` object.
    */
   async getEventById(id) {
-    return dbOneOrNone(`
+    const row = await dbOneOrNone(`
       SELECT
         e.id,
         e.name          AS title,
@@ -169,13 +170,39 @@ const eventService = {
         e.ticket_price,
         e.created_at,
         d.id            AS "departmentId",
-        d.name          AS "departmentName"
+        d.name          AS "departmentName",
+        ed.prize        AS "detailPrize",
+        ed.document_url AS "detailDocumentUrl",
+        ed.brief        AS "detailBrief",
+        ed.rules        AS "detailRules",
+        ed.rounds       AS "detailRounds",
+        ed.team_size    AS "detailTeamSize",
+        ed.evaluation_criteria AS "detailEvaluationCriteria"
       FROM events e
       LEFT JOIN departments d ON d.id = e.department_id
+      LEFT JOIN event_details ed ON ed.event_id = e.id
       WHERE e.id = $1
         AND e.status = 'published'
         AND e.visibility = 'public'
     `, [id])
+
+    if (!row) return null
+
+    // Shape the response with a nested details object
+    const { detailPrize, detailDocumentUrl, detailBrief, detailRules, detailRounds, detailTeamSize, detailEvaluationCriteria, ...event } = row
+
+    return {
+      ...event,
+      details: {
+        prize: detailPrize || {},
+        document_url: detailDocumentUrl || '',
+        brief: detailBrief || '',
+        rules: detailRules || [],
+        rounds: detailRounds || null,
+        team_size: detailTeamSize || null,
+        evaluation_criteria: detailEvaluationCriteria || []
+      }
+    }
   },
 
   /**
