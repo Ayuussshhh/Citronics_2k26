@@ -49,7 +49,8 @@ function fmtTime(iso) {
 }
 
 function fmtCurrency(amount) {
-  return `₹${parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+  // jsPDF standard fonts don't support the Unicode rupee sign (₹), use Rs. instead
+  return `Rs. ${parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
 }
 
 /**
@@ -163,128 +164,195 @@ export async function generateAllTicketsPDF(tickets) {
 async function _drawTicketOnPage(doc, ticket) {
   const W = 210
   const H = 148
-  const margin = 14
+  const mg = 9          // left/right margin inside panels
+  const perfX = 152     // divider between left content and right QR panel
+  const footerH = 10
+  const topBar = 5
 
-  // Background
+  /* ── Base background ───────────────────────────────────── */
   doc.setFillColor(BRAND.white)
   doc.rect(0, 0, W, H, 'F')
 
-  // Top accent
+  /* ── Top accent band ───────────────────────────────────── */
   doc.setFillColor(BRAND.primary)
-  doc.rect(0, 0, W, 6, 'F')
+  doc.rect(0, 0, W, topBar, 'F')
 
-  // Watermark
-  drawWatermark(doc, W, H)
+  /* ── Left panel tint ───────────────────────────────────── */
+  doc.setFillColor('#F7F6FF')
+  doc.rect(0, topBar, perfX, H - topBar - footerH, 'F')
 
-  // Left section
-  const leftW = 145
+  /* ── Right panel stays white ───────────────────────────── */
+  doc.setFillColor(BRAND.white)
+  doc.rect(perfX, topBar, W - perfX, H - topBar - footerH, 'F')
 
-  // Event title
+  /* ── Watermark (left panel only) ────────────────────────── */
+  drawWatermark(doc, perfX, H)
+
+  /* ─────────────────────────────────────────────────────────
+   *  LEFT PANEL
+   * ───────────────────────────────────────────────────────── */
+
+  // Tiny brand tag
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
+  doc.setFontSize(6)
+  doc.setTextColor(BRAND.primary)
+  doc.text('CITRONICS 2026  |  E-TICKET', mg, 12)
+
+  // Event title (max 2 lines)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
   doc.setTextColor(BRAND.dark)
-  const titleLines = doc.splitTextToSize(ticket.eventTitle || 'Event', leftW - margin * 2)
-  doc.text(titleLines, margin, 22)
-  const titleBottomY = 22 + titleLines.length * 7
+  const maxTitleW = perfX - mg * 2
+  const rawTitleLines = doc.splitTextToSize(ticket.eventTitle || 'Event', maxTitleW)
+  const titleLines = rawTitleLines.slice(0, 2)
+  doc.text(titleLines, mg, 20)
+  const titleEndY = 20 + titleLines.length * 6.5
 
-  doc.setDrawColor(BRAND.primary)
-  doc.setLineWidth(0.5)
-  doc.line(margin, titleBottomY + 2, margin + 40, titleBottomY + 2)
+  // Accent bar under title
+  doc.setFillColor(BRAND.primary)
+  doc.rect(mg, titleEndY + 2, 28, 1, 'F')
 
-  let infoY = titleBottomY + 10
-  const infoGap = 9
-
-  function drawInfoRow(label, value, y) {
+  /* ── Info rows ─────────────────────────────────────────── */
+  // Each row: label (5.5pt gray) + value (8.5pt dark)
+  // Returns the Y at the bottom of the value text
+  function infoCell(label, value, x, y, maxW) {
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7.5)
+    doc.setFontSize(5.5)
     doc.setTextColor(BRAND.gray)
-    doc.text(label.toUpperCase(), margin, y)
+    doc.text(label.toUpperCase(), x, y)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
+    doc.setFontSize(8.5)
     doc.setTextColor(BRAND.dark)
-    doc.text(String(value || 'N/A'), margin, y + 5)
+    const wrapped = doc.splitTextToSize(String(value || 'N/A'), maxW)
+    doc.text(wrapped.slice(0, 2), x, y + 4.5)
+    return y + 4.5 + wrapped.slice(0, 2).length * 5
   }
 
-  drawInfoRow('Date', fmtDate(ticket.startTime), infoY)
-  drawInfoRow('Time',
-    ticket.startTime
-      ? `${fmtTime(ticket.startTime)}${ticket.endTime ? ' – ' + fmtTime(ticket.endTime) : ''}`
-      : 'TBA',
-    infoY + infoGap
-  )
-  drawInfoRow('Venue', ticket.venue || 'To be announced', infoY + infoGap * 2)
-  drawInfoRow('Attendee', ticket.attendeeName || ticket.attendee_name || 'N/A', infoY + infoGap * 3)
+  function hRule(y) {
+    doc.setDrawColor('#DDD8F5')
+    doc.setLineWidth(0.25)
+    doc.line(mg, y, perfX - mg, y)
+  }
 
+  const col1X = mg
+  const col2X = mg + 70
+  const colW = 64
+  let rowY = titleEndY + 8
+  const rowGap = 14  // vertical space allocated per row
+
+  // Row 1 — Date | Time (side by side)
+  const timeStr = ticket.startTime
+    ? `${fmtTime(ticket.startTime)}${ticket.endTime ? ' - ' + fmtTime(ticket.endTime) : ''}`
+    : 'TBA'
+  infoCell('Date', fmtDate(ticket.startTime), col1X, rowY, colW)
+  infoCell('Time', timeStr, col2X, rowY, colW)
+  rowY += rowGap
+  hRule(rowY)
+  rowY += 4
+
+  // Row 2 — Venue (full width)
+  infoCell('Venue', ticket.venue || 'To be announced', col1X, rowY, maxTitleW)
+  rowY += rowGap
+  hRule(rowY)
+  rowY += 4
+
+  // Row 3 — Attendee | Email (side by side)
   const email = ticket.attendeeEmail || ticket.attendee_email
+  infoCell('Attendee', ticket.attendeeName || ticket.attendee_name || 'N/A', col1X, rowY, colW)
   if (email) {
-    drawInfoRow('Email', email, infoY + infoGap * 4)
+    infoCell('Email', email, col2X, rowY, colW)
   }
+  rowY += rowGap
+
+  // Row 4 — Amount Paid (only if paid)
   if (ticket.priceAtBooking > 0) {
-    drawInfoRow('Amount Paid', fmtCurrency(ticket.priceAtBooking), infoY + infoGap * (email ? 5 : 4))
+    hRule(rowY)
+    rowY += 4
+    infoCell('Amount Paid', fmtCurrency(ticket.priceAtBooking), col1X, rowY, colW)
   }
 
-  // Perforation
-  const perfX = leftW
-  doc.setDrawColor('#D1D5DB')
+  /* ─────────────────────────────────────────────────────────
+   *  PERFORATION
+   * ───────────────────────────────────────────────────────── */
+  doc.setDrawColor('#BFB4F5')
   doc.setLineWidth(0.3)
-  for (let py = 10; py < H - 6; py += 4) {
-    doc.line(perfX, py, perfX, py + 2)
+  for (let py = topBar + 4; py < H - footerH - 4; py += 3.5) {
+    doc.line(perfX, py, perfX, py + 1.8)
   }
 
-  // Right section
-  const rightX = perfX + 5
-  const rightCenterX = rightX + (W - perfX - 5) / 2
+  /* ─────────────────────────────────────────────────────────
+   *  RIGHT PANEL
+   * ───────────────────────────────────────────────────────── */
+  const rightCX = perfX + (W - perfX) / 2  // horizontal center of right panel
 
+  // QR code with a subtle border
   const verifyUrl = getVerifyUrl(ticket.qrCode)
   const qrDataUrl = await generateQRDataUrl(verifyUrl, 300)
   const qrSize = 38
-  doc.addImage(qrDataUrl, 'PNG', rightCenterX - qrSize / 2, 18, qrSize, qrSize)
+  const qrX = rightCX - qrSize / 2
+  const qrY = 12
 
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(6.5)
-  doc.setTextColor(BRAND.gray)
-  doc.text('SCAN TO VERIFY', rightCenterX, 60, { align: 'center' })
+  doc.setFillColor(BRAND.white)
+  doc.setDrawColor('#DDD8F5')
+  doc.setLineWidth(0.5)
+  roundedRect(doc, qrX - 2, qrY - 2, qrSize + 4, qrSize + 4, 2, 'FD')
+  doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
-  doc.setTextColor(BRAND.primary)
-  doc.text(`#${ticket.ticketId}`, rightCenterX, 70, { align: 'center' })
-
+  // SCAN TO VERIFY label
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(5.5)
   doc.setTextColor(BRAND.gray)
-  const shortQr = ticket.qrCode ? ticket.qrCode.slice(0, 8) + '...' + ticket.qrCode.slice(-4) : ''
-  doc.text(shortQr, rightCenterX, 75, { align: 'center' })
+  doc.text('SCAN TO VERIFY', rightCX, qrY + qrSize + 6, { align: 'center' })
 
+  // Ticket ID
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(BRAND.primary)
+  doc.text(`#${ticket.ticketId}`, rightCX, qrY + qrSize + 12, { align: 'center' })
+
+  // Order ID (tiny, optional)
+  const orderLabelY = qrY + qrSize + 17
   if (ticket.orderId) {
-    doc.setFontSize(5.5)
-    doc.text(`Order: ${ticket.orderId}`, rightCenterX, 82, { align: 'center' })
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(4.5)
+    doc.setTextColor(BRAND.gray)
+    doc.text(`Order: ${ticket.orderId}`, rightCX, orderLabelY, { align: 'center' })
   }
 
+  // Status badge
   const isCheckedIn = !!ticket.checkInAt
   const statusText = isCheckedIn ? 'USED' : ticket.bookingStatus === 'confirmed' ? 'VALID' : 'PENDING'
   const statusColor = isCheckedIn ? BRAND.gray : ticket.bookingStatus === 'confirmed' ? BRAND.success : '#F59E0B'
+  const badgeY = ticket.orderId ? orderLabelY + 5 : qrY + qrSize + 20
+  const badgeW = 26
   doc.setFillColor(statusColor)
-  roundedRect(doc, rightCenterX - 11, 88, 22, 7, 2, 'F')
+  roundedRect(doc, rightCX - badgeW / 2, badgeY, badgeW, 7.5, 2, 'F')
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(7)
   doc.setTextColor(BRAND.white)
-  doc.text(statusText, rightCenterX, 93, { align: 'center' })
+  doc.text(statusText, rightCX, badgeY + 5, { align: 'center' })
 
-  // Footer
+  /* ─────────────────────────────────────────────────────────
+   *  FOOTER
+   * ───────────────────────────────────────────────────────── */
   doc.setFillColor(BRAND.dark)
-  doc.rect(0, H - 12, W, 12, 'F')
+  doc.rect(0, H - footerH, W, footerH, 'F')
+
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
+  doc.setFontSize(7.5)
   doc.setTextColor(BRAND.white)
-  doc.text('CITRONICS 2026', margin, H - 5)
+  doc.text('CITRONICS 2026', mg, H - 5.5)
+
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(6)
+  doc.setFontSize(5.5)
   doc.setTextColor('#9CA3AF')
-  doc.text('This ticket is non-transferable. Present QR code at entry for verification.', margin, H - 1.5)
+  doc.text('Non-transferable. Present QR code at entry.', mg, H - 1.5)
+
   if (ticket.issuedAt) {
-    doc.setFontSize(5.5)
-    doc.text(`Issued: ${fmtDate(ticket.issuedAt)}`, W - margin, H - 5, { align: 'right' })
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(5)
+    doc.setTextColor('#9CA3AF')
+    doc.text(`Issued: ${fmtDate(ticket.issuedAt)}`, W - mg, H - 5.5, { align: 'right' })
   }
 }
 
