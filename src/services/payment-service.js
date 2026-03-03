@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 import { dbOne, dbOneOrNone, dbAny, dbNone, dbTx } from 'src/lib/database'
+import { enqueueTicketEmails } from 'src/services/email-service'
 
 const { getJuspayInstance, getPaymentPageClientId, APIError } = require('src/lib/juspay')
 
@@ -640,7 +641,7 @@ const paymentService = {
  * All in a single transaction.
  */
 async function _confirmPaymentAndGenerateTickets(paymentId, primaryBookingId, rawPayload, transactionId, gatewayResponse, orderId) {
-  return dbTx(async t => {
+  const result = await dbTx(async t => {
     // Determine all booking IDs for this payment
     let bookingIds = [primaryBookingId]
     if (rawPayload && typeof rawPayload === 'object' && rawPayload.bookingIds) {
@@ -739,6 +740,19 @@ async function _confirmPaymentAndGenerateTickets(paymentId, primaryBookingId, ra
       tickets: allTickets
     }
   })
+
+  // ── Auto-send ticket emails (fire-and-forget via queue) ──────────────
+  if (result.tickets && result.tickets.length > 0) {
+    try {
+      await enqueueTicketEmails(result.tickets, orderId)
+      console.log(`[PaymentService] Ticket emails queued for order ${orderId} (${result.tickets.length} ticket(s))`)
+    } catch (emailErr) {
+      // Email failure should NEVER block payment confirmation
+      console.error(`[PaymentService] Failed to queue ticket emails for ${orderId}:`, emailErr)
+    }
+  }
+
+  return result
 }
 
 /**
