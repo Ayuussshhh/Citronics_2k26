@@ -24,7 +24,22 @@ let _processing = false    // Only one worker at a time
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 10_000    // 10s between retries
 const SEND_DELAY_MS = 3_000      // 3s between consecutive sends
+const MAX_QUEUE_SIZE = 200       // hard cap — reject when queue is full
+const MAX_FAILED_JOBS = 50       // max failed-job entries kept in memory
 const _failedJobs = []           // Keep last N failed jobs for diagnostics
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Mask a recipient email for safe logging — keeps domain, redacts local part.
+ * e.g. "user@example.com" → "***@example.com"
+ */
+function maskEmail(email) {
+  if (!email || typeof email !== 'string') return '[unknown]'
+  const at = email.indexOf('@')
+
+  return at === -1 ? '[redacted]' : `***@${email.slice(at + 1)}`
+}
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -46,13 +61,19 @@ export function enqueueEmail(job) {
     return
   }
 
+  if (_queue.length >= MAX_QUEUE_SIZE) {
+    console.error(`[EmailQueue] Queue full (${MAX_QUEUE_SIZE}) — dropping job: ${job.tag || job.subject} → ${maskEmail(job.to)}`)
+
+    return
+  }
+
   _queue.push({
     job,
     retries: 0,
     addedAt: new Date().toISOString()
   })
 
-  console.log(`[EmailQueue] Enqueued: ${job.tag || job.subject} → ${job.to}  (queue size: ${_queue.length})`)
+  console.log(`[EmailQueue] Enqueued: ${job.tag || job.subject} → ${maskEmail(job.to)}  (queue size: ${_queue.length})`)
 
   // Kick off processing if not already running
   _startProcessing()
@@ -88,11 +109,11 @@ async function _processNext() {
   const { job, retries } = entry
 
   try {
-    console.log(`[EmailQueue] Sending: ${job.tag || job.subject} → ${job.to}  (attempt ${retries + 1}/${MAX_RETRIES + 1})`)
+    console.log(`[EmailQueue] Sending: ${job.tag || job.subject} → ${maskEmail(job.to)}  (attempt ${retries + 1}/${MAX_RETRIES + 1})`)
     await sendMail(job)
-    console.log(`[EmailQueue] Sent OK: ${job.tag || job.subject} → ${job.to}`)
+    console.log(`[EmailQueue] Sent OK: ${job.tag || job.subject} → ${maskEmail(job.to)}`)
   } catch (err) {
-    console.error(`[EmailQueue] Failed: ${job.tag || job.subject} → ${job.to} — ${err.message}`)
+    console.error(`[EmailQueue] Failed: ${job.tag || job.subject} → ${maskEmail(job.to)} — ${err.message}`)
 
     if (retries < MAX_RETRIES) {
       // Re-enqueue at the back with incremented retry count
@@ -107,17 +128,16 @@ async function _processNext() {
     } else {
       // Max retries exhausted — log to failed list
       _failedJobs.push({
-        to: job.to,
+        to: maskEmail(job.to), // store masked — no PII in diagnostics
         subject: job.subject,
         tag: job.tag,
         error: err.message,
         failedAt: new Date().toISOString(),
         attempts: retries + 1
       })
-      // Keep only last 50 failures in memory
-      if (_failedJobs.length > 50) _failedJobs.shift()
+      if (_failedJobs.length > MAX_FAILED_JOBS) _failedJobs.shift()
 
-      console.error(`[EmailQueue] PERMANENTLY FAILED after ${MAX_RETRIES + 1} attempts: ${job.tag || job.subject} → ${job.to}`)
+      console.error(`[EmailQueue] PERMANENTLY FAILED after ${MAX_RETRIES + 1} attempts: ${job.tag || job.subject} → ${maskEmail(job.to)}`)
     }
   }
 

@@ -63,7 +63,7 @@ function drawWatermark(doc, W, H) {
     [W * 0.12, H * 0.52], [W * 0.48, H * 0.30], [W * 0.78, H * 0.52],
     [W * 0.28, H * 0.82], [W * 0.62, H * 0.78], [W * 0.35, H * 0.10]
   ]
-  stamps.forEach(([x, y]) => doc.text(text, x, y, { angle: 28 }))
+  stamps.forEach(([x, y]) => { doc.text(text, x, y, { angle: 28 }) })
 }
 
 function getVerifyUrl(qrCode) {

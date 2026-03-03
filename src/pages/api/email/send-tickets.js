@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth/next'
 import nextAuthConfig from 'src/lib/nextAuthConfig'
 import paymentService from 'src/services/payment-service'
 import { enqueueTicketEmails } from 'src/services/email-service'
+import { ELEVATED_ROLES } from 'src/configs/acl'
 
 /**
  * POST /api/email/send-tickets
@@ -42,7 +43,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid orderId format' })
     }
 
-    // Get payment status to find tickets
+    // ── Pre-authorization (read-only, before any mutating ops) ───────────
+    const sessionRole = (session.user.role || '').toLowerCase()
+    const isElevated = ELEVATED_ROLES.includes(sessionRole)
+
+    if (!isElevated) {
+      const owner = await paymentService.getPaymentOwner(sanitizedOrderId)
+      if (!owner) {
+        return res.status(404).json({ success: false, message: 'Order not found' })
+      }
+      if (owner.userId !== session.user.id) {
+        return res.status(403).json({ success: false, message: 'Forbidden — you can only re-send your own tickets' })
+      }
+    }
+
+    // ── Fetch / verify tickets (idempotent for already-confirmed payments) ─
     const result = await paymentService.verifyAndProcessPayment(sanitizedOrderId)
 
     if (result.status !== 'success' || !result.tickets || result.tickets.length === 0) {
@@ -54,14 +69,12 @@ export default async function handler(req, res) {
       })
     }
 
-    // Authorization: Ensure the tickets belong to this user (or user is admin)
-    const ELEVATED_ROLES = ['admin', 'organizer', 'owner', 'head']
-    const sessionRole = (session.user.role || '').toLowerCase()
-    const ticketEmail = result.tickets[0]?.attendeeEmail
-    const sessionEmail = session.user.email
-
-    if (!ELEVATED_ROLES.includes(sessionRole) && ticketEmail !== sessionEmail) {
-      return res.status(403).json({ success: false, message: 'Forbidden — you can only re-send your own tickets' })
+    // ── Defense-in-depth: every ticket must belong to the session user ────
+    if (!isElevated) {
+      const allOwned = result.tickets.every(t => t.attendeeEmail === session.user.email)
+      if (!allOwned) {
+        return res.status(403).json({ success: false, message: 'Forbidden — ticket set contains tickets belonging to another user' })
+      }
     }
 
     // Enqueue the ticket emails (non-blocking)

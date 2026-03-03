@@ -24,6 +24,8 @@ function getTransporter() {
     throw new Error('[Mailer] SMTP_USER and SMTP_PASS must be configured in environment variables')
   }
 
+  const isProd = process.env.NODE_ENV === 'production'
+
   _transporter = nodemailer.createTransport({
     host,
     port,
@@ -34,8 +36,12 @@ function getTransporter() {
     maxMessages: 5,       // per connection before reconnect
     rateDelta: 2000,      // minimum 2s between messages (rate limiting)
     rateLimit: 1,         // max 1 message per rateDelta
+    connectionTimeout: 30_000,   // 30s to establish TCP connection
+    greetingTimeout: 30_000,     // 30s to receive SMTP greeting
+    socketTimeout: 120_000,      // 2min idle socket timeout
+    authTimeout: 30_000,         // 30s for AUTH exchange
     tls: {
-      rejectUnauthorized: false // accept self-signed in dev
+      rejectUnauthorized: isProd // enforce valid cert in production only
     }
   })
 

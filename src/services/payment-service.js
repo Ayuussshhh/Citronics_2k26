@@ -434,6 +434,36 @@ const paymentService = {
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
+  //  3b. GET PAYMENT OWNER (read-only — for pre-authorization checks)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Returns the owner (userId + email) of a payment without any mutation.
+   * Use this before verifyAndProcessPayment to authorize a request early.
+   *
+   * @param {string} juspayOrderId
+   * @returns {Promise<{paymentId, paymentStatus, userId, userEmail}|null>}
+   */
+  async getPaymentOwner(juspayOrderId) {
+    const row = await dbOneOrNone(`
+      SELECT p.id, p.status, u.id AS user_id, u.email AS user_email
+      FROM payments p
+      JOIN bookings b ON b.id = p.booking_id
+      JOIN users u ON u.id = b.user_id
+      WHERE p.juspay_order_id = $1
+    `, [juspayOrderId])
+
+    if (!row) return null
+
+    return {
+      paymentId: row.id,
+      paymentStatus: row.status,
+      userId: row.user_id,
+      userEmail: row.user_email
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
   //  4. GET USER TICKETS
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -741,15 +771,14 @@ async function _confirmPaymentAndGenerateTickets(paymentId, primaryBookingId, ra
     }
   })
 
-  // ── Auto-send ticket emails (fire-and-forget via queue) ──────────────
+  // ── Auto-send ticket emails (true fire-and-forget — never blocks) ─────
   if (result.tickets && result.tickets.length > 0) {
-    try {
-      await enqueueTicketEmails(result.tickets, orderId)
-      console.log(`[PaymentService] Ticket emails queued for order ${orderId} (${result.tickets.length} ticket(s))`)
-    } catch (emailErr) {
-      // Email failure should NEVER block payment confirmation
-      console.error(`[PaymentService] Failed to queue ticket emails for ${orderId}:`, emailErr)
-    }
+    enqueueTicketEmails(result.tickets, orderId)
+      .catch(emailErr => {
+        // Email failure should NEVER block or delay payment confirmation
+        console.error(`[PaymentService] Failed to queue ticket emails for ${orderId}:`, emailErr)
+      })
+    console.log(`[PaymentService] Ticket emails queued for order ${orderId} (${result.tickets.length} ticket(s))`)
   }
 
   return result
