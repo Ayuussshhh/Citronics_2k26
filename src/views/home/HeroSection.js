@@ -199,55 +199,7 @@ function CountColon() {
   )
 }
 
-/* ── Rotating word ────────────────────────────────────────────── */
-function RotatingWord({ words: HERO_WORDS = [] }) {
-  const c = useAppPalette()
-  const [index, setIndex] = useState(0)
 
-  useEffect(() => {
-    if (HERO_WORDS.length === 0) return
-    setIndex(0)
-    const id = setInterval(() => setIndex(prev => (prev + 1) % HERO_WORDS.length), 2800)
-    return () => clearInterval(id)
-  }, [HERO_WORDS])
-
-  return (
-    <Box
-      sx={{
-        display: 'block',
-        position: 'relative',
-        width: '100%',
-        height: { xs: '6rem', sm: '9rem', md: '12rem', lg: '14rem' },
-        overflow: 'hidden'
-      }}
-    >
-      <AnimatePresence mode='wait'>
-        <MotionTypography
-          key={HERO_WORDS[index]}
-          initial={{ y: '100%', opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: '-100%', opacity: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          component='span'
-          sx={{
-            display: 'block',
-            fontWeight: 900,
-            fontSize: 'inherit',
-            lineHeight: 1.15,
-            letterSpacing: 'inherit',
-            textTransform: 'inherit',
-            background: c.gradientTriple,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          {HERO_WORDS[index]}
-        </MotionTypography>
-      </AnimatePresence>
-    </Box>
-  )
-}
 
 /* ── Circular starburst badge (NasSummit-style) ───────────────── */
 function StarburstBadge({ text, size = 120, color }) {
@@ -318,7 +270,7 @@ function StarburstBadge({ text, size = 120, color }) {
 }
 
 /* ═══════════ HERO SECTION ═══════════════════════════════════════ */
-export default function HeroSection({ heroWords: HERO_WORDS = [], eventStartDate }) {
+export default function HeroSection({ eventStartDate }) {
   const c = useAppPalette()
   const isDark = c.isDark
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
@@ -334,7 +286,7 @@ export default function HeroSection({ heroWords: HERO_WORDS = [], eventStartDate
 
   useEffect(() => {
     const tick = () => {
-      const targetDate = eventStartDate ? new Date(eventStartDate) : new Date('2026-03-15T09:00:00')
+      const targetDate = eventStartDate ? new Date(eventStartDate) : new Date('2026-04-07T09:00:00')
       const diff = targetDate - Date.now()
       if (diff <= 0) return setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
       setTimeLeft({
@@ -389,7 +341,7 @@ export default function HeroSection({ heroWords: HERO_WORDS = [], eventStartDate
         justifyContent: 'center',
         overflow: 'hidden',
         /* xs: reduced from 24 — no top navbar on mobile any more */
-        pt: { xs: 10, md: 28 },
+        pt: { xs: 4, md: 16 },
         pb: { xs: 6, md: 10 }
       }}
     >
@@ -412,98 +364,62 @@ export default function HeroSection({ heroWords: HERO_WORDS = [], eventStartDate
       <Container maxWidth='xl' sx={{ position: 'relative', zIndex: 2 }}>
         <MotionBox variants={stagger} initial='hidden' animate='visible'>
 
-          {/* ── Row 1: "THE" + paragraph ─────────────────────────────── */}
-          <MotionBox variants={fadeUp}>
+          {/* ── Logo ────────────────────────────────────────────────── */}
+          <MotionBox variants={fadeUp} sx={{ display: 'flex', justifyContent: 'center', mb: { xs: 3, md: 4 } }}>
             <Box
+              component='img'
+              src='/logo/citronics2.png'
+              alt='Citronics Logo'
               sx={{
-                display: 'flex',
-                flexDirection: { xs: 'column', md: 'row' },
-                alignItems: { xs: 'flex-start', md: 'flex-end' },
-                gap: { xs: 2, md: 6 },
-                mb: { xs: 1, md: 0.5 }
+                width: { xs: '70vw', sm: '50vw', md: '38vw', lg: '32vw' },
+                maxWidth: 600,
+                minWidth: 220,
+                height: 'auto',
+                objectFit: 'contain',
+                filter: isDark ? 'drop-shadow(0 0 40px rgba(255,255,255,0.08))' : 'drop-shadow(0 4px 24px rgba(0,0,0,0.10))',
+                transition: 'transform 0.4s ease',
+                '&:hover': { transform: 'scale(1.03)' }
               }}
-            >
-              <Typography
-                variant='h1'
-                sx={{
-                  fontWeight: 900,
-                  fontSize: { xs: '4rem', sm: '6rem', md: '8rem', lg: '9.5rem' },
-                  lineHeight: 0.9,
-                  letterSpacing: '-4px',
-                  color: heroText,
-                  textTransform: 'uppercase',
-                  flexShrink: 0
-                }}
-              >
-                THE
-              </Typography>
-              <Typography
-                sx={{
-                  color: heroTextMuted,
-                  fontWeight: 400,
-                  fontSize: { xs: '0.95rem', md: '1.05rem' },
-                  lineHeight: 1.7,
-                  maxWidth: { xs: '100%', md: 340 },
-                  pb: { md: 2 }
-                }}
-              >
-                The flagship annual technical festival — where 2000+ minds collide
-                across 5 departments, 24+ events, and 3 electrifying days of innovation.
-              </Typography>
-            </Box>
+            />
           </MotionBox>
 
-          {/* ── Row 2: Icon + "CITRONICS" ────────────────────────────── */}
-          <MotionBox variants={fadeUp}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, mb: { xs: 0, md: -1 } }}>
-              {/* Checkmark icon */}
-              <Box
-                sx={{
-                  width: { xs: 48, sm: 64, md: 80 },
-                  height: { xs: 48, sm: 64, md: 80 },
-                  borderRadius: '16px',
-                  background: c.gradientPrimary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  boxShadow: `0 0 40px ${c.primaryA40}`
-                }}
-              >
-                <Icon icon='tabler:heart-filled' style={{ color: c.primaryContrast, fontSize: 36 }} />
-              </Box>
-              <Typography
-                variant='h1'
-                sx={{
-                  fontWeight: 900,
-                  fontSize: { xs: '3.5rem', sm: '5.5rem', md: '8rem', lg: '9.5rem' },
-                  lineHeight: 0.95,
-                  letterSpacing: '-4px',
-                  textTransform: 'uppercase',
-                  background: c.gradientTriple,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}
-              >
-                CITRONICS
-              </Typography>
-            </Box>
-          </MotionBox>
-
-          {/* ── Row 3: Rotating word (massive) ───────────────────────── */}
-          <MotionBox variants={fadeUp} sx={{ mb: { xs: 4, md: 5 } }}>
-            <Box
+          {/* ── Tagline ──────────────────────────────────────────────── */}
+          <MotionBox variants={fadeUp} sx={{ textAlign: 'center', mb: { xs: 2, md: 3 } }}>
+            <Typography
+              variant='h4'
               sx={{
-                fontWeight: 900,
-                fontSize: { xs: '3.8rem', sm: '5.8rem', md: '8rem', lg: '9.5rem' },
-                lineHeight: 1.15,
-                letterSpacing: '-4px',
-                textTransform: 'uppercase',
-                color: heroText
+                fontWeight: 800,
+                fontSize: { xs: '1.25rem', sm: '1.6rem', md: '2rem', lg: '2.4rem' },
+                lineHeight: 1.3,
+                background: c.gradientTriple,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                maxWidth: 800,
+                mx: 'auto',
+                px: { xs: 2, md: 0 }
               }}
             >
-              <RotatingWord words={HERO_WORDS} />
-            </Box>
+              AI for Sustainable Tomorrow: Where Innovation Meets Sustainable Vision
+            </Typography>
+          </MotionBox>
+
+          {/* ── Description paragraph ────────────────────────────────── */}
+          <MotionBox variants={fadeUp} sx={{ textAlign: 'center', mb: { xs: 4, md: 5 } }}>
+            <Typography
+              sx={{
+                color: heroTextMuted,
+                fontWeight: 400,
+                fontSize: { xs: '0.95rem', sm: '1.05rem', md: '1.15rem' },
+                lineHeight: 1.8,
+                maxWidth: 680,
+                mx: 'auto',
+                px: { xs: 2, md: 0 }
+              }}
+            >
+              The flagship annual techno-management fest — where talented minds collide
+              across various domain, featuring 35 technical competitions, and 3 electrifying
+              days of innovation.
+            </Typography>
           </MotionBox>
 
           {/* ── Hero image with starburst badges ─────────────────────── */}

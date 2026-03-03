@@ -172,11 +172,12 @@ const eventService = {
         d.id            AS "departmentId",
         d.name          AS "departmentName",
         ed.prize        AS "detailPrize",
-        ed.image_url    AS "detailImageUrl",
+        ed.document_url AS "detailDocumentUrl",
         ed.brief        AS "detailBrief",
         ed.rules        AS "detailRules",
         ed.rounds       AS "detailRounds",
-        ed.team_size    AS "detailTeamSize"
+        ed.team_size    AS "detailTeamSize",
+        ed.evaluation_criteria AS "detailEvaluationCriteria"
       FROM events e
       LEFT JOIN departments d ON d.id = e.department_id
       LEFT JOIN event_details ed ON ed.event_id = e.id
@@ -188,17 +189,18 @@ const eventService = {
     if (!row) return null
 
     // Shape the response with a nested details object
-    const { detailPrize, detailImageUrl, detailBrief, detailRules, detailRounds, detailTeamSize, ...event } = row
+    const { detailPrize, detailDocumentUrl, detailBrief, detailRules, detailRounds, detailTeamSize, detailEvaluationCriteria, ...event } = row
 
     return {
       ...event,
       details: {
-        prize: detailPrize || [],
-        image_url: detailImageUrl || '',
+        prize: detailPrize || {},
+        document_url: detailDocumentUrl || '',
         brief: detailBrief || '',
         rules: detailRules || [],
-        rounds: detailRounds || [],
-        team_size: detailTeamSize || null
+        rounds: detailRounds || 0,
+        team_size: detailTeamSize || null,
+        evaluation_criteria: detailEvaluationCriteria || []
       }
     }
   },

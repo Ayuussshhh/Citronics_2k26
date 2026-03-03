@@ -48,10 +48,8 @@ function formatTime(iso) {
 }
 
 function getEventImage(event) {
-  // Prefer event_details.image_url (Cloudinary) over legacy images array
-  if (event?.details?.image_url) {
-    return event.details.image_url
-  }
+  // Prefer legacy images array for event images
+  // (event_details.document_url is for the rules/info document, not images)
   if (event?.images && Array.isArray(event.images) && event.images.length > 0) {
     const img = event.images[0]
     return typeof img === 'string' ? img : img?.url || null
@@ -60,17 +58,20 @@ function getEventImage(event) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- *  Countdown hook
+ *  Countdown hook — always counts down to the festival start date
  * ═════════════════════════════════════════════════════════════════════════ */
-function useCountdown(targetIso) {
+const FEST_START = new Date('2026-04-07T09:00:00').getTime()
+
+function useCountdown() {
   const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 })
 
   useEffect(() => {
-    if (!targetIso) return
-    const target = new Date(targetIso).getTime()
     const tick = () => {
-      const diff = target - Date.now()
-      if (diff <= 0) { setTimeLeft({ d: 0, h: 0, m: 0, s: 0 }); return }
+      const diff = FEST_START - Date.now()
+      if (diff <= 0) {
+        setTimeLeft({ d: 0, h: 0, m: 0, s: 0 })
+        return
+      }
       setTimeLeft({
         d: Math.floor(diff / 86400000),
         h: Math.floor((diff % 86400000) / 3600000),
@@ -81,7 +82,7 @@ function useCountdown(targetIso) {
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [targetIso])
+  }, [])
 
   return timeLeft
 }
@@ -193,9 +194,8 @@ export default function EventDetailView() {
   const { data: session } = useSession()
   const { id } = router.query
   const { currentEvent: event, currentEventLoading: loading, currentEventError } = useSelector(state => state.events)
-  const timeLeft = useCountdown(event?.start_time)
+  const timeLeft = useCountdown()
   const isMobile = useMediaQuery(c.theme.breakpoints.down('md'))
-  const [openRoundIdx, setOpenRoundIdx] = useState(null)
 
   useEffect(() => {
     if (id) dispatch(fetchEventById(id))
@@ -533,7 +533,7 @@ export default function EventDetailView() {
             )}
 
             {/* ── Prizes ── */}
-            {details.prize && details.prize.length > 0 && (
+            {details.prize && typeof details.prize === 'object' && Object.keys(details.prize).length > 0 && (
               <Box sx={{ mt: 3 }}>
                 <Typography
                   variant='overline'
@@ -542,10 +542,9 @@ export default function EventDetailView() {
                   Prizes
                 </Typography>
                 <Box component='ul' sx={{ pl: 2.5, m: 0, listStyle: 'none' }}>
-                  {details.prize.map((p, i) => (
+                  {details.prize.total && (
                     <Box
                       component='li'
-                      key={i}
                       sx={{
                         display: 'flex',
                         alignItems: 'flex-start',
@@ -560,11 +559,37 @@ export default function EventDetailView() {
                       />
                       <Typography
                         variant='body1'
-                        sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.6 }}
+                        sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.6, fontWeight: 600 }}
                       >
-                        {p}
+                        Total Prize Pool: ₹{details.prize.total.toLocaleString('en-IN')}
                       </Typography>
                     </Box>
+                  )}
+                  {['1st', '2nd', '3rd'].map((place) => (
+                    details.prize[place] ? (
+                      <Box
+                        component='li'
+                        key={place}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 1.5,
+                          mb: 1.25
+                        }}
+                      >
+                        <Icon
+                          icon='tabler:trophy'
+                          fontSize={18}
+                          style={{ color, marginTop: 3, flexShrink: 0 }}
+                        />
+                        <Typography
+                          variant='body1'
+                          sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.6 }}
+                        >
+                          {place} Prize: ₹{details.prize[place].toLocaleString('en-IN')}
+                        </Typography>
+                      </Box>
+                    ) : null
                   ))}
                 </Box>
               </Box>
@@ -600,7 +625,7 @@ export default function EventDetailView() {
             )}
 
             {/* ── Rounds ── */}
-            {details.rounds && details.rounds.length > 0 && (
+            {details.rounds > 0 && (
               <Box sx={{ mt: 3 }}>
                 <Typography
                   variant='overline'
@@ -608,101 +633,18 @@ export default function EventDetailView() {
                 >
                   Rounds
                 </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {details.rounds.map((rawRound, i) => {
-                    // Each round may be a JSON string or plain text
-                    let parsed = null
-                    try { parsed = typeof rawRound === 'string' ? JSON.parse(rawRound) : rawRound } catch { /* plain text */ }
-                    const roundTitle = parsed?.title || `Round ${i + 1}`
-                    const roundPoints = Array.isArray(parsed?.points) ? parsed.points : []
-
-                    return (
-                      <Box
-                        key={i}
-                        sx={{
-                          borderRadius: '12px',
-                          border: '1px solid',
-                          borderColor: c.dividerA30,
-                          overflow: 'hidden'
-                        }}
-                      >
-                        <Box
-                          onClick={() => setOpenRoundIdx(openRoundIdx === i ? null : i)}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            px: 2.5,
-                            py: 1.75,
-                            cursor: 'pointer',
-                            '&:hover': { bgcolor: alpha(color, 0.04) },
-                            transition: 'background 0.2s ease'
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box
-                              sx={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                bgcolor: alpha(color, 0.1),
-                                color,
-                                fontSize: '0.78rem',
-                                fontWeight: 800
-                              }}
-                            >
-                              {i + 1}
-                            </Box>
-                            <Typography
-                              variant='body2'
-                              sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.9rem' }}
-                            >
-                              {roundTitle}
-                            </Typography>
-                          </Box>
-                          <IconButton size='small' sx={{ color: 'text.secondary' }}>
-                            <Icon
-                              icon={openRoundIdx === i ? 'tabler:chevron-up' : 'tabler:chevron-down'}
-                              fontSize={18}
-                            />
-                          </IconButton>
-                        </Box>
-                        <Collapse in={openRoundIdx === i}>
-                          <Box sx={{ px: 2.5, pb: 2, pt: 0 }}>
-                            {roundPoints.length > 0 ? (
-                              <Box component='ul' sx={{ pl: 2, m: 0 }}>
-                                {roundPoints.map((point, j) => (
-                                  <Box
-                                    component='li'
-                                    key={j}
-                                    sx={{
-                                      color: 'text.secondary',
-                                      fontSize: '0.9rem',
-                                      lineHeight: 1.75,
-                                      mb: 0.5,
-                                      '&::marker': { color, fontWeight: 700 }
-                                    }}
-                                  >
-                                    {point}
-                                  </Box>
-                                ))}
-                              </Box>
-                            ) : (
-                              <Typography
-                                variant='body2'
-                                sx={{ color: 'text.secondary', fontSize: '0.9rem', lineHeight: 1.75, whiteSpace: 'pre-line' }}
-                              >
-                                {parsed ? 'Details coming soon.' : rawRound}
-                              </Typography>
-                            )}
-                          </Box>
-                        </Collapse>
-                      </Box>
-                    )
-                  })}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Icon
+                    icon='tabler:list-numbers'
+                    fontSize={20}
+                    style={{ color, flexShrink: 0 }}
+                  />
+                  <Typography
+                    variant='body1'
+                    sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.6 }}
+                  >
+                    {details.rounds} {details.rounds === 1 ? 'Round' : 'Rounds'}
+                  </Typography>
                 </Box>
               </Box>
             )}
@@ -734,6 +676,43 @@ export default function EventDetailView() {
                     />
                   ))}
                 </Box>
+              </Box>
+            )}
+
+            {/* ── Download Document ── */}
+            {details.document_url && (
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant='overline'
+                  sx={{ color, fontWeight: 700, letterSpacing: '0.12em', mb: 1.5, display: 'block' }}
+                >
+                  Event Document
+                </Typography>
+                <Button
+                  component='a'
+                  href={details.document_url}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  download
+                  variant='outlined'
+                  startIcon={<Icon icon='tabler:file-download' fontSize={18} />}
+                  sx={{
+                    borderRadius: '10px',
+                    borderColor: alpha(color, 0.5),
+                    color,
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    textTransform: 'none',
+                    px: 2.5,
+                    py: 1,
+                    '&:hover': {
+                      borderColor: color,
+                      bgcolor: alpha(color, 0.06)
+                    }
+                  }}
+                >
+                  Download Event Details
+                </Button>
               </Box>
             )}
 
