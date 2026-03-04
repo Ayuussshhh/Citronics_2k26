@@ -155,7 +155,10 @@ const LoginPage = () => {
   const router = useRouter()
   const dispatch = useDispatch()
   const c = useAppPalette()
-  const returnUrl = router.query.returnUrl || '/'
+
+  // Sanitize returnUrl: must be a string, start with '/', and not be protocol-relative (//)
+  const rawReturn = router.query.returnUrl
+  const returnUrl = (typeof rawReturn === 'string' && rawReturn.startsWith('/') && !rawReturn.startsWith('//')) ? rawReturn : '/'
 
   // ── Mode: 'register' (default) or 'login' ──
   const [mode, setMode] = useState('register')
@@ -201,30 +204,36 @@ const LoginPage = () => {
     return () => window.removeEventListener('mousemove', handler)
   }, [])
 
-  // Purple blink
+  // Purple blink — track all timeouts via ref to avoid leaks on unmount
+  const purpleBlinkTimers = useRef([])
   useEffect(() => {
+    const timers = purpleBlinkTimers.current
     const schedule = () => {
-      const t = setTimeout(() => {
+      const t1 = setTimeout(() => {
         setIsPurpleBlinking(true)
-        setTimeout(() => { setIsPurpleBlinking(false); schedule() }, 150)
+        const t2 = setTimeout(() => { setIsPurpleBlinking(false); schedule() }, 150)
+        timers.push(t2)
       }, Math.random() * 4000 + 3000)
-      return t
+      timers.push(t1)
     }
-    const t = schedule()
-    return () => clearTimeout(t)
+    schedule()
+    return () => { timers.forEach(clearTimeout); timers.length = 0 }
   }, [])
 
-  // Black blink
+  // Black blink — same pattern
+  const blackBlinkTimers = useRef([])
   useEffect(() => {
+    const timers = blackBlinkTimers.current
     const schedule = () => {
-      const t = setTimeout(() => {
+      const t1 = setTimeout(() => {
         setIsBlackBlinking(true)
-        setTimeout(() => { setIsBlackBlinking(false); schedule() }, 150)
+        const t2 = setTimeout(() => { setIsBlackBlinking(false); schedule() }, 150)
+        timers.push(t2)
       }, Math.random() * 4000 + 3000)
-      return t
+      timers.push(t1)
     }
-    const t = schedule()
-    return () => clearTimeout(t)
+    schedule()
+    return () => { timers.forEach(clearTimeout); timers.length = 0 }
   }, [])
 
   // Look at each other briefly when user starts typing
@@ -728,28 +737,36 @@ const LoginPage = () => {
               {isExistingUser ? (
                 <Typography variant='body2' color='text.secondary'>
                   Don&apos;t have an account?{' '}
-                  <Typography
-                    component='span'
-                    variant='body2'
-                    color='primary'
-                    sx={{ fontWeight: 700, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                  <Box
+                    component='button'
+                    type='button'
                     onClick={() => { setMode('register'); setPhoneLookup(null); setErrors({}); setServerError('') }}
+                    sx={{
+                      all: 'unset', display: 'inline', cursor: 'pointer',
+                      color: 'primary.main', fontWeight: 700, fontSize: 'inherit', fontFamily: 'inherit',
+                      '&:hover, &:focus-visible': { textDecoration: 'underline' },
+                      '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2, borderRadius: '2px' }
+                    }}
                   >
                     Create Account
-                  </Typography>
+                  </Box>
                 </Typography>
               ) : (
                 <Typography variant='body2' color='text.secondary'>
                   Already have an account?{' '}
-                  <Typography
-                    component='span'
-                    variant='body2'
-                    color='primary'
-                    sx={{ fontWeight: 700, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                  <Box
+                    component='button'
+                    type='button'
                     onClick={() => { setMode('login'); setErrors({}); setServerError('') }}
+                    sx={{
+                      all: 'unset', display: 'inline', cursor: 'pointer',
+                      color: 'primary.main', fontWeight: 700, fontSize: 'inherit', fontFamily: 'inherit',
+                      '&:hover, &:focus-visible': { textDecoration: 'underline' },
+                      '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2, borderRadius: '2px' }
+                    }}
                   >
                     Sign In
-                  </Typography>
+                  </Box>
                 </Typography>
               )}
             </Box>

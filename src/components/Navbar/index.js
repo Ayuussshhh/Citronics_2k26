@@ -154,7 +154,15 @@ const Navbar = ({ navLinks, activeSection, onNavClick }) => {
   const handleThemeToggle = () => saveSettings({ ...settings, mode: isDark ? 'light' : 'dark' })
   const handleProfileOpen = e => setProfileAnchor(e.currentTarget)
   const handleProfileClose = () => setProfileAnchor(null)
-  const handleLogout = async () => { setProfileAnchor(null); await signOut({ redirect: false }); router.push('/login') }
+  const handleLogout = async () => {
+    setProfileAnchor(null)
+    try {
+      const result = await signOut({ redirect: false })
+      router.push(result?.url || '/login')
+    } catch {
+      router.push('/login')
+    }
+  }
 
   const handleAnchorClick = (e, href) => {
     // If it's a page route (not an anchor), use Next.js router for reliable SPA navigation
