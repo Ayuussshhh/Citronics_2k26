@@ -8,20 +8,22 @@ import FeaturedEvents from 'src/views/home/FeaturedEvents'
 import TestimonialsSection from 'src/views/home/TestimonialsSection'
 import SponsorsSection from 'src/views/home/SponsorsSection'
 import PublicFooter from 'src/views/home/PublicFooter'
+import eventService from 'src/services/event-service'
 
 /**
  * Public Home Page — Citronics 2026
  * Visible to all visitors. No authentication required.
+ * Featured & upcoming events are fetched server-side via getServerSideProps.
  */
-const Home = () => {
+const Home = ({ featuredEvents, upcomingEvents }) => {
   return (
     <Box sx={{ overflowX: 'hidden', pb: { xs: 'calc(64px + env(safe-area-inset-bottom, 0px))', md: 0 } }}>
       <PublicNavbar />
       <HeroSection />
-      <UpcomingEventsScroller />
+      <UpcomingEventsScroller events={upcomingEvents} />
       <AboutSection />
       <StatsSection />
-      <FeaturedEvents />
+      <FeaturedEvents events={featuredEvents} />
       <TestimonialsSection />
       <SponsorsSection />
       <PublicFooter />
@@ -36,3 +38,29 @@ Home.guestGuard = false
 Home.getLayout = page => page
 
 export default Home
+
+// ── Server-side data fetching ─────────────────────────────────────────────────
+export async function getServerSideProps() {
+  try {
+    const [featuredEvents, upcomingEvents] = await Promise.all([
+      eventService.getFeaturedEvents(3),
+      eventService.getPublishedEvents({ limit: 10, sort: 'newest' })
+    ])
+
+    return {
+      props: {
+        featuredEvents: JSON.parse(JSON.stringify(featuredEvents || [])),
+        upcomingEvents: JSON.parse(JSON.stringify(upcomingEvents || []))
+      }
+    }
+  } catch (error) {
+    console.error('[Home SSR]', error)
+
+    return {
+      props: {
+        featuredEvents: [],
+        upcomingEvents: []
+      }
+    }
+  }
+}
