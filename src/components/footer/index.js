@@ -19,8 +19,8 @@ const LINK_COLUMN_1 = [
 ]
 
 const LINK_COLUMN_2 = [
- { label: 'Core Team', href: '/team' },
-  { label: 'Gallery', href: '/gallery' },
+ { label: 'Core Team', href: '#' },
+  { label: 'Gallery', href: '#' },
   { label: 'Terms of Use', href: '#' },
 
 
