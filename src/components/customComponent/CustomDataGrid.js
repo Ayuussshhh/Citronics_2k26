@@ -19,7 +19,7 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
-import TextField from '@mui/material/TextField'
+import CustomTextField from 'src/components/mui/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 import Pagination from '@mui/material/Pagination'
 import Skeleton from '@mui/material/Skeleton'
@@ -65,7 +65,7 @@ function GridToolbar() {
 function MobileSearchBar({ value, onChange }) {
   return (
     <Box sx={{ px: 2, pt: 2, pb: 1.5 }}>
-      <TextField
+      <CustomTextField
         fullWidth
         size='small'
         value={value}
@@ -83,8 +83,7 @@ function MobileSearchBar({ value, onChange }) {
                 <Icon icon='tabler:x' fontSize={16} />
               </IconButton>
             </InputAdornment>
-          ) : null,
-          sx: { borderRadius: 2 }
+          ) : null
         }}
       />
     </Box>
@@ -192,6 +191,11 @@ const CustomDataGrid = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [mobileSearch, setMobileSearch] = useState('')
 
+  const handleMobileSearch = useCallback((val) => {
+    setMobileSearch(val)
+    onPaginationModelChange?.({ ...paginationModel, page: 0 })
+  }, [onPaginationModelChange, paginationModel])
+
   const filteredRows = useCallback(() => {
     if (!isMobile || !mobileSearch) return rows
 
@@ -282,21 +286,23 @@ const CustomDataGrid = ({
   }
 
   /* ── Mobile View ── */
+  const isServerMode = paginationMode === 'server'
   const visibleRows = filteredRows()
 
-  const totalPages = Math.ceil(
-    (mobileSearch ? visibleRows.length : rowCount || rows.length) / paginationModel.pageSize
-  )
-  const pagedRows = mobileSearch
-    ? visibleRows.slice(
-        paginationModel.page * paginationModel.pageSize,
-        (paginationModel.page + 1) * paginationModel.pageSize
+  const totalCount = isServerMode ? rowCount : visibleRows.length
+  const totalPages = Math.max(1, Math.ceil(totalCount / paginationModel.pageSize))
+  const safePage = Math.min(paginationModel.page, Math.max(0, totalPages - 1))
+
+  const pagedRows = isServerMode
+    ? visibleRows
+    : visibleRows.slice(
+        safePage * paginationModel.pageSize,
+        (safePage + 1) * paginationModel.pageSize
       )
-    : visibleRows
 
   return (
     <Box>
-      {showToolbar && <MobileSearchBar value={mobileSearch} onChange={setMobileSearch} />}
+      {showToolbar && !isServerMode && <MobileSearchBar value={mobileSearch} onChange={handleMobileSearch} />}
 
       <Box sx={{ px: 2, pb: 2 }}>
         {/* Loading */}
@@ -334,11 +340,11 @@ const CustomDataGrid = ({
         )}
 
         {/* Pagination */}
-        {!loading && pagedRows.length > 0 && (
+        {!loading && totalCount > 0 && (
           <Stack spacing={1.5} alignItems='center' sx={{ mt: 2 }}>
             <Pagination
               count={totalPages}
-              page={paginationModel.page + 1}
+              page={safePage + 1}
               onChange={(_, p) => onPaginationModelChange?.({ ...paginationModel, page: p - 1 })}
               color='primary'
               size='small'
