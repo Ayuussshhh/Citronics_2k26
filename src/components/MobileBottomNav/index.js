@@ -17,13 +17,14 @@ const NAV_ITEMS = [
   { label: 'Events', href: '/events', icon: 'tabler:calendar-event' },
   {
     label: 'About',
-    href: '/about',
+    href: '#',
     icon: 'tabler:info-circle',
     children: [
-      { label: 'About Us', href: '/about', icon: 'tabler:info-circle' },
-      { label: 'Gallery', href: '/gallery', icon: 'tabler:photo' },
-      { label: 'Core Team', href: '/team', icon: 'tabler:users-group' },
-      { label: 'Privacy Policy', href: '/privacy-policy', icon: 'tabler:shield-check' }
+      { label: 'About CDGI', href: '/about', icon: 'tabler:school' },
+      { label: 'About Citronics', href: '/about-citronics', icon: 'tabler:rocket' },
+   
+      { label: 'About Team', href: '/team', icon: 'tabler:users-group' },
+
     ]
   },
   { label: 'Cart', href: '/cart', icon: 'tabler:shopping-cart', showBadge: true },
