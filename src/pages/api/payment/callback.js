@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     // SECURITY: Sanitize orderId to prevent header injection / XSS in redirect
     // Our order IDs follow pattern: CIT-{timestamp}-{alphanumeric}
     const orderId = String(rawOrderId).replace(/[^a-zA-Z0-9\-_]/g, '')
-    if (!orderId || orderId.length > 50) {
+    if (!orderId || orderId.length > 80) {
       res.redirect(302, '/checkout?payment=error&reason=invalid_order')
       return
     }
