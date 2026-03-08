@@ -459,7 +459,7 @@ const adminService = {
              e.id AS event_id, e.name AS event_name,
              COUNT(t.id)::int AS tickets_generated,
              COUNT(t.check_in_at)::int AS tickets_checked_in,
-             p.transaction_id, p.payment_method, p.gateway_status, p.paid_at
+             p.transaction_id, p.gateway, p.status AS gateway_status, p.paid_at
       FROM bookings b
       JOIN users u ON u.id = b.user_id
       JOIN events e ON e.id = b.event_id
@@ -486,7 +486,7 @@ const adminService = {
 
     if (conditions.length > 0) query += ` WHERE ${conditions.join(' AND ')}`
     query += ` GROUP BY b.id, u.id, u.name, u.email, u.phone, e.id, e.name,
-               p.transaction_id, p.payment_method, p.gateway_status, p.paid_at`
+               p.transaction_id, p.gateway, p.status, p.paid_at`
     query += ` ORDER BY b.booked_at DESC LIMIT $${p++} OFFSET $${p++}`
     params.push(limit, offset)
 
