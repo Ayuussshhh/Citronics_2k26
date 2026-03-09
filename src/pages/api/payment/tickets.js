@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth/next'
 import nextAuthConfig from 'src/lib/nextAuthConfig'
 import paymentService from 'src/services/payment-service'
-import { ELEVATED_ROLES } from 'src/configs/acl'
 
 /**
  * GET /api/payment/tickets?userId=xxx
@@ -31,6 +30,7 @@ export default async function handler(req, res) {
     }
 
     // ── Authorization ───────────────────────────────────────────────────
+    const ELEVATED_ROLES = ['admin', 'organizer', 'owner', 'head']
     const sessionRole = (session.user.role || '').toLowerCase()
     if (requestedUserId !== session.user.id && !ELEVATED_ROLES.includes(sessionRole)) {
       return res.status(403).json({ success: false, message: 'Forbidden' })

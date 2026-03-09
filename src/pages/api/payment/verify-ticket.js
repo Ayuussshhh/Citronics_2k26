@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth/next'
 import nextAuthConfig from 'src/lib/nextAuthConfig'
 import paymentService from 'src/services/payment-service'
-import { ELEVATED_ROLES } from 'src/configs/acl'
 
 /**
  * POST /api/payment/verify-ticket
@@ -62,8 +61,9 @@ export default async function handler(req, res) {
     }
 
     // Ownership: non-staff can only look up their own tickets
+    const STAFF_ROLES = ['admin', 'organizer', 'owner', 'head']
     const userRole = (session.user.role || '').toLowerCase()
-    const isStaff = ELEVATED_ROLES.includes(userRole)
+    const isStaff = STAFF_ROLES.includes(userRole)
     if (!isStaff && ticket.userId !== session.user.id) {
       return res.status(403).json({ success: false, message: 'You are not authorised to view this ticket' })
     }
