@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import Box from '@mui/material/Box'
 import Container from '@mui/material/Container'
 import Typography from '@mui/material/Typography'
@@ -51,7 +51,7 @@ function getImage(event) {
  * @param {object} props.event - Event data object
  * @param {number} props.index - Card index for staggered animation
  * @param {string} props.accent - Accent color from the theme
- */function SiloCard({ event, index, accent }) {
+ */const SiloCard = memo(function SiloCard({ event, index, accent }) {
   const c = useAppPalette()
   const router = useRouter()
   const dispatch = useDispatch()
@@ -268,6 +268,7 @@ function getImage(event) {
         >
           <Button
             variant='contained'
+            size='small'
             onClick={e => {
               e.stopPropagation()
               router.push(`/events/${event.id}`)
@@ -277,11 +278,13 @@ function getImage(event) {
               bgcolor: accent,
               color: c.isDark ? c.black : c.white,
               fontWeight: 700,
-              fontSize: '0.78rem',
+              fontSize: '0.72rem',
               letterSpacing: 0.6,
               textTransform: 'uppercase',
-              py: 0.9,
-              borderRadius: '8px',
+              py: 0.45,
+              minHeight: 0,
+              height: 30,
+              borderRadius: '6px',
               '&:hover': { bgcolor: alpha(accent, 0.85) }
             }}
           >
@@ -289,6 +292,7 @@ function getImage(event) {
           </Button>
           <Button
             variant='outlined'
+            size='small'
             disabled={isInCart}
             onClick={e => {
               e.stopPropagation()
@@ -308,11 +312,13 @@ function getImage(event) {
               borderColor: alpha(accent, 0.5),
               color: accent,
               fontWeight: 700,
-              fontSize: '0.78rem',
+              fontSize: '0.72rem',
               letterSpacing: 0.6,
               textTransform: 'uppercase',
-              py: 0.9,
-              borderRadius: '8px',
+              py: 0.45,
+              minHeight: 0,
+              height: 30,
+              borderRadius: '6px',
               '&:hover': { borderColor: accent, bgcolor: alpha(accent, 0.08) }
             }}
           >
@@ -381,7 +387,7 @@ function getImage(event) {
       </Box>
     </MotionBox>
   )
-}
+})
 
 /* ── Slide variants ─────────────────────────────────────────────────────── */
 const slideVariants = {
@@ -484,23 +490,7 @@ export default function FeaturedEvents({ categoryEvents = [] }) {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.25, md: 2 }, minWidth: 0, flex: 1 }}>
-              {/* Category count badge */}
-              <Box
-                sx={{
-                  flexShrink: 0,
-                  width: { xs: 30, md: 36 },
-                  height: { xs: 34, md: 40 },
-                  borderRadius: '50%',
-                  border: `2px solid ${accent}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Typography sx={{ fontWeight: 800, fontSize: { xs: '0.75rem', md: '0.85rem' }, color: accent, lineHeight: 1 }}>
-                  {current.events.length}
-                </Typography>
-              </Box>
+
 
               {/* Dynamic category heading */}
               <Box sx={{ overflow: 'hidden', position: 'relative', minHeight: { xs: 32, md: 42 }, flex: 1 }}>
