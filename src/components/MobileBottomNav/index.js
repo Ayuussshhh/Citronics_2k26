@@ -35,7 +35,7 @@ const NAV_ITEMS = [
     icon: 'tabler:user-circle',
     authOnly: true,
     children: [
-      { label: 'Dashboard', href: '/dashboard', icon: 'tabler:layout-dashboard' },
+    
       { label: 'Sign Out', href: '#', icon: 'tabler:logout', isSignOut: true }
     ]
   }
