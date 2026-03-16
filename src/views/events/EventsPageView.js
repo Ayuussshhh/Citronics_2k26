@@ -259,73 +259,103 @@ const EventCard = memo(function EventCard({ event, index }) {
             minWidth: { sm: 150 }
           }}
         >
-          <Button
-            variant='contained'
-            size='small'
-            disableElevation
-            disabled={isInCart}
-            onClick={() => dispatch(addToCart({
-              eventId: event.id,
-              title: event.title,
-              ticketPrice: event.ticket_price || 0,
-              quantity: 1,
-              image: getEventImage(event),
-              startTime: event.start_time,
-              venue: event.venue,
-              maxAvailable: event.seats > 0 ? Math.max(0, event.seats - (event.registered || 0)) : null
-            }))}
-            sx={{
-              width: '100%',
-              minWidth: 150,
-              height: 40,
-              borderRadius: '10px',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              bgcolor: accent,
-              color: c.isDark ? c.black : c.white,
-              '&:hover': { bgcolor: alpha(accent, 0.85), boxShadow: `0 4px 20px ${alpha(accent, 0.25)}` },
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {isInCart ? 'In Cart' : 'Add to Cart'}
-          </Button>
-          <Button
-            variant='contained'
-            size='small'
-            disableElevation
-            disabled={spotsLeft !== null && spotsLeft <= 0}
-            onClick={() => {
-              dispatch(setCheckoutItems({
-                items: [{ eventId: event.id, quantity: 1 }],
-                source: 'buyNow'
-              }))
-              if (session?.user?.id) {
-                dispatch(setExistingUser({ userId: session.user.id }))
-                router.push('/checkout')
-              } else {
-                router.push('/login?returnUrl=/checkout')
-              }
-            }}
-            sx={{
-              width: '100%',
-              minWidth: 150,
-              height: 40,
-              borderRadius: '10px',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              bgcolor: 'transparent',
-              color: accent,
-              border: `1px solid ${alpha(accent, 0.22)}`,
-              '&:hover': { bgcolor: alpha(accent, 0.06), boxShadow: `0 4px 20px ${alpha(accent, 0.08)}` },
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {spotsLeft !== null && spotsLeft <= 0 ? 'Sold Out' : 'Buy Ticket'}
-          </Button>
+          {event.registration_link ? (
+            <Button
+              component='a'
+              href={event.registration_link}
+              target='_blank'
+              rel='noopener noreferrer'
+              variant='contained'
+              size='small'
+              disableElevation
+              sx={{
+                width: '100%',
+                minWidth: 150,
+                height: 40,
+                borderRadius: '10px',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                bgcolor: accent,
+                color: c.isDark ? c.black : c.white,
+                '&:hover': { bgcolor: alpha(accent, 0.85), boxShadow: `0 4px 20px ${alpha(accent, 0.25)}` },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              Register Now
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant='contained'
+                size='small'
+                disableElevation
+                disabled={isInCart}
+                onClick={() => dispatch(addToCart({
+                  eventId: event.id,
+                  title: event.title,
+                  ticketPrice: event.ticket_price || 0,
+                  quantity: 1,
+                  image: getEventImage(event),
+                  startTime: event.start_time,
+                  venue: event.venue,
+                  maxAvailable: event.seats > 0 ? Math.max(0, event.seats - (event.registered || 0)) : null
+                }))}
+                sx={{
+                  width: '100%',
+                  minWidth: 150,
+                  height: 40,
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  bgcolor: accent,
+                  color: c.isDark ? c.black : c.white,
+                  '&:hover': { bgcolor: alpha(accent, 0.85), boxShadow: `0 4px 20px ${alpha(accent, 0.25)}` },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {isInCart ? 'In Cart' : 'Add to Cart'}
+              </Button>
+              <Button
+                variant='contained'
+                size='small'
+                disableElevation
+                disabled={spotsLeft !== null && spotsLeft <= 0}
+                onClick={() => {
+                  dispatch(setCheckoutItems({
+                    items: [{ eventId: event.id, quantity: 1 }],
+                    source: 'buyNow'
+                  }))
+                  if (session?.user?.id) {
+                    dispatch(setExistingUser({ userId: session.user.id }))
+                    router.push('/checkout')
+                  } else {
+                    router.push('/login?returnUrl=/checkout')
+                  }
+                }}
+                sx={{
+                  width: '100%',
+                  minWidth: 150,
+                  height: 40,
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  bgcolor: 'transparent',
+                  color: accent,
+                  border: `1px solid ${alpha(accent, 0.22)}`,
+                  '&:hover': { bgcolor: alpha(accent, 0.06), boxShadow: `0 4px 20px ${alpha(accent, 0.08)}` },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {spotsLeft !== null && spotsLeft <= 0 ? 'Sold Out' : 'Buy Ticket'}
+              </Button>
+            </>
+          )}
           <Button
             variant='text'
             size='small'
