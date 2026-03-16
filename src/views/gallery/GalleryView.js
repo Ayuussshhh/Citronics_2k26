@@ -172,7 +172,7 @@ const GalleryCard = memo(function GalleryCard({ image, index, onClick }) {
 
 /* ── Gallery Section Component (Backup for future use) ────────────────────────────── */
 
-function _GallerySection({ title, description, images, isLoading, onClick }) {
+function GallerySection({ title, description, images, isLoading, onClick }) {
   const c = useAppPalette()
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE)
   const [sectionLoading, setSectionLoading] = useState(false)
