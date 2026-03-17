@@ -707,6 +707,51 @@ export default function HeroSection({ loading = false }) {
         >
           Reserve Your Spot
         </Typography>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 1.5,
+            borderRadius: '12px',
+            border: `1.5px solid ${heroBorder}`,
+            bgcolor: isDark ? alpha(c.bgPaper, 0.6) : alpha(c.bgPaper, 0.6),
+            backdropFilter: 'blur(12px)',
+            px: 3.5,
+            py: 1.25,
+            mb: { xs: 3, md: 4 }
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.75
+            }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: '1rem', sm: '1.15rem', md: '1.3rem' },
+                letterSpacing: 0.8,
+                color: c.primary,
+                fontVariantNumeric: 'tabular-nums'
+              }}
+            >
+              8 • 9 • 10
+            </Typography>
+            <Typography
+              sx={{
+                fontWeight: 600,
+                fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.2rem' },
+                letterSpacing: 1,
+                color: c.textPrimary,
+                textTransform: 'uppercase'
+              }}
+            >
+              April
+            </Typography>
+          </Box>
+        </Box>
         <Stack
           direction='row'
           justifyContent='center'
