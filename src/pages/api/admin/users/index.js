@@ -26,16 +26,22 @@ export default async function handler(req, res) {
       const limitRaw = Array.isArray(req.query.limit) ? req.query.limit[0] : (req.query.limit || '20')
       const role = Array.isArray(req.query.role) ? req.query.role[0] : req.query.role
       const search = Array.isArray(req.query.search) ? req.query.search[0] : (req.query.search || '')
+      const dateFromRaw = Array.isArray(req.query.dateFrom) ? req.query.dateFrom[0] : req.query.dateFrom
+      const dateToRaw = Array.isArray(req.query.dateTo) ? req.query.dateTo[0] : req.query.dateTo
 
       const pageNum = Math.max(1, parseInt(pageRaw, 10))
       const limitNum = Math.min(100, Math.max(1, parseInt(limitRaw, 10)))
       const offset = (pageNum - 1) * limitNum
 
+      // Parse date filters
+      const dateFrom = dateFromRaw ? new Date(dateFromRaw) : null
+      const dateTo = dateToRaw ? new Date(dateToRaw) : null
+
       const canSeeAdmins = isOwner(user.role)
 
       const [users, total] = await Promise.all([
-        adminService.getAllUsers({ limit: limitNum, offset, role, search, canSeeAdmins }),
-        adminService.getUsersCount({ role, search, canSeeAdmins })
+        adminService.getAllUsers({ limit: limitNum, offset, role, search, canSeeAdmins, dateFrom, dateTo }),
+        adminService.getUsersCount({ role, search, canSeeAdmins, dateFrom, dateTo })
       ])
 
       return res.status(200).json({

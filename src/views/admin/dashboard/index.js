@@ -9,6 +9,7 @@ import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
+import ButtonGroup from '@mui/material/ButtonGroup'
 import Avatar from '@mui/material/Avatar'
 import Divider from '@mui/material/Divider'
 import Alert from '@mui/material/Alert'
@@ -19,12 +20,21 @@ import Icon from 'src/components/Icon'
 import Can from 'src/layouts/components/acl/Can'
 import { isOwner } from 'src/configs/acl'
 import axios from 'axios'
-import { KPICard, CustomChip, CustomDataGrid, AddDialog } from 'src/components/customComponent'
+import { KPICard, CustomChip, CustomDataGrid, AddDialog, getDateRangeFromPreset } from 'src/components/customComponent'
 
 const ApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
 
 const fmtDate = d => { try { return format(new Date(d), 'dd MMM yy') } catch { return '—' } }
 const fmtCurrency = v => `₹${Number(v || 0).toLocaleString('en-IN')}`
+
+/* ── Date Filter Presets ── */
+const DATE_FILTER_PRESETS = [
+  { label: 'Today', value: 'today' },
+  { label: 'Yesterday', value: 'yesterday' },
+  { label: 'Last 7 Days', value: 'last7days' },
+  { label: 'Last Month', value: 'lastMonth' },
+  { label: 'All Time', value: 'all' }
+]
 
 const QuickAction = ({ icon, label, desc, color = 'primary', onClick }) => {
   const theme = useTheme()
@@ -61,6 +71,7 @@ const AdminDashboardView = () => {
   const [error, setError] = useState('')
   const [eventDialog, setEventDialog] = useState(false)
   const [userDialog, setUserDialog] = useState(false)
+  const [dateFilter, setDateFilter] = useState('all')
 
   const userRole = session?.user?.role?.toLowerCase() || ''
   const firstName = session?.user?.name?.split(' ')[0] || 'Admin'
@@ -72,14 +83,22 @@ const AdminDashboardView = () => {
   const fetchDashboard = useCallback(async () => {
     setLoading(true); setError('')
     try {
+      // Get date range from preset
+      const { from, to } = getDateRangeFromPreset(dateFilter)
+      const dateParams = new URLSearchParams()
+      if (from) dateParams.set('dateFrom', from.toISOString())
+      if (to) dateParams.set('dateTo', to.toISOString())
+      const dateQuery = dateParams.toString() ? `?${dateParams.toString()}` : ''
+      const dateQueryAppend = dateParams.toString() ? `&${dateParams.toString()}` : ''
+
       const requests = [
-        axios.get('/api/admin/dashboard/stats'),
-        axios.get('/api/admin/events?limit=8'),
+        axios.get(`/api/admin/dashboard/stats${dateQuery}`),
+        axios.get(`/api/admin/events?limit=8${dateQueryAppend}`),
         axios.get('/api/departments').catch(() => ({ data: { data: [] } })),
         axios.get('/api/admin/analytics?period=30').catch(() => ({ data: { data: null } }))
       ]
       if (ownerFlag) {
-        requests.push(axios.get('/api/admin/users?limit=6'))
+        requests.push(axios.get(`/api/admin/users?limit=6${dateQueryAppend}`))
       }
       const results = await Promise.all(requests)
       setStats(results[0].data.data)
@@ -89,7 +108,7 @@ const AdminDashboardView = () => {
       if (ownerFlag && results[4]) setRecentUsers(results[4].data.data || [])
     } catch { setError('Failed to load dashboard data.') }
     finally { setLoading(false) }
-  }, [ownerFlag])
+  }, [ownerFlag, dateFilter])
 
   useEffect(() => { fetchDashboard() }, [fetchDashboard])
 
@@ -127,10 +146,8 @@ const AdminDashboardView = () => {
           <Avatar sx={{ width: 30, height: 30, bgcolor: 'primary.main', fontSize: 12, fontWeight: 700 }}>
             {row.name?.[0]?.toUpperCase() ?? 'U'}
           </Avatar>
-          <Box sx={{ minWidth: 0 }}>
             <Typography variant='body2' fontWeight={600} noWrap>{row.name}</Typography>
             <Typography variant='caption' color='text.secondary' noWrap>{row.email}</Typography>
-          </Box>
         </Box>
       )
     },
@@ -172,6 +189,56 @@ const AdminDashboardView = () => {
                   onClick={() => setUserDialog(true)} sx={{ borderRadius: 2 }}>Add User</Button>
               </Can>
             </Box>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Date Filter */}
+      <Card sx={{ mb: 3, boxShadow: 1 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+          <Box sx={{ display: 'flex', alignItems: 'left', justifyContent: 'left', p:2, flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant='body2' color='text.secondary' sx={{ mr: 1, fontWeight: 600 }}>
+              <Icon icon='tabler:calendar-stats' fontSize={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+              Filter by:
+            </Typography>
+            <ButtonGroup
+              variant='outlined'
+              size='small'
+              disabled={loading}
+              sx={{
+                '& .MuiButton-root': {
+                  fontSize: '0.75rem',
+                  px: { xs: 1, sm: 1.5 },
+                  py: 0.5,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderColor: alpha(theme.palette.primary.main, 0.3),
+                  '&.active': {
+                    bgcolor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                    borderColor: theme.palette.primary.main,
+                    '&:hover': { bgcolor: theme.palette.primary.dark }
+                  }
+                }
+              }}
+            >
+              {DATE_FILTER_PRESETS.map(preset => (
+                <Button
+                  key={preset.value}
+                  onClick={() => setDateFilter(preset.value)}
+                  className={dateFilter === preset.value ? 'active' : ''}
+                  sx={{
+                    ...(dateFilter === preset.value && {
+                      bgcolor: theme.palette.primary.main,
+                      color: theme.palette.primary.contrastText,
+                      '&:hover': { bgcolor: theme.palette.primary.dark }
+                    })
+                  }}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </ButtonGroup>
           </Box>
         </CardContent>
       </Card>
@@ -324,7 +391,8 @@ const AdminDashboardView = () => {
               action={<Button size='small' onClick={() => router.push('/admin/events')}>See all</Button>} sx={{ pb: 0 }} />
             <Divider sx={{ mt: 1.5 }} />
             <CustomDataGrid columns={eventCols} rows={recentEvents} loading={loading}
-              showToolbar={false} paginationMode='client'
+              showToolbar showExport exportFileName='recent_events'
+              paginationMode='client'
               paginationModel={{ page: 0, pageSize: 8 }} rowCount={recentEvents.length} emptyText='No events yet.' />
           </Card>
         </Grid>
@@ -335,7 +403,8 @@ const AdminDashboardView = () => {
                 action={<Button size='small' onClick={() => router.push('/admin/users')}>See all</Button>} sx={{ pb: 0 }} />
               <Divider sx={{ mt: 1.5 }} />
               <CustomDataGrid columns={userCols} rows={recentUsers} loading={loading}
-                showToolbar={false} paginationMode='client'
+                showToolbar showExport exportFileName='recent_users'
+                paginationMode='client'
                 paginationModel={{ page: 0, pageSize: 6 }} rowCount={recentUsers.length} emptyText='No users found.' />
             </Card>
           </Grid>

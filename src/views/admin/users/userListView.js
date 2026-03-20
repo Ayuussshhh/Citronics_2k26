@@ -12,6 +12,7 @@ import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
+import ButtonGroup from '@mui/material/ButtonGroup'
 import IconButton from '@mui/material/IconButton'
 import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
@@ -24,10 +25,11 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import Avatar from '@mui/material/Avatar'
+import { alpha, useTheme } from '@mui/material/styles'
 import Icon from 'src/components/Icon'
 import Can from 'src/layouts/components/acl/Can'
 import { ConfirmDialog } from 'src/components/mui'
-import { CustomDataGrid, CustomChip, AddDialog } from 'src/components/customComponent'
+import { CustomDataGrid, CustomChip, AddDialog, getDateRangeFromPreset } from 'src/components/customComponent'
 import usePermissions from 'src/hooks/usePermissions'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -38,6 +40,15 @@ const ROLES = {
   ],
   admin: []
 }
+
+/* ── Date Filter Presets ── */
+const DATE_FILTER_PRESETS = [
+  { label: 'Today', value: 'today' },
+  { label: 'Yesterday', value: 'yesterday' },
+  { label: 'Last 7 Days', value: 'last7days' },
+  { label: 'Last Month', value: 'lastMonth' },
+  { label: 'All Time', value: 'all' }
+]
 
 const getUserFields = (isEdit, roles) => [
   { name: 'name', label: 'Full Name', required: true, icon: 'tabler:user' },
@@ -71,6 +82,7 @@ const getUserFields = (isEdit, roles) => [
 
 const UserListView = () => {
   const router = useRouter()
+  const theme = useTheme()
   const { isOwner, role: userRole } = usePermissions()
 
   const [rows, setRows] = useState([])
@@ -78,6 +90,7 @@ const UserListView = () => {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
+  const [dateFilter, setDateFilter] = useState('all')
   const [pagination, setPagination] = useState({ page: 0, pageSize: 10 })
   const [total, setTotal] = useState(0)
   const [addDialog, setAddDialog] = useState({ open: false, user: null })
@@ -94,6 +107,12 @@ const UserListView = () => {
       const p = new URLSearchParams({ page: pagination.page + 1, limit: pagination.pageSize })
       if (search) p.set('search', search)
       if (roleFilter) p.set('role', roleFilter)
+
+      // Add date filters
+      const { from, to } = getDateRangeFromPreset(dateFilter)
+      if (from) p.set('dateFrom', from.toISOString())
+      if (to) p.set('dateTo', to.toISOString())
+
       const res = await axios.get(`/api/admin/users?${p}`)
       setRows(res.data.data || [])
       setTotal(res.data.pagination?.total || 0)
@@ -102,7 +121,7 @@ const UserListView = () => {
     } finally {
       setLoading(false)
     }
-  }, [pagination, search, roleFilter])
+  }, [pagination, search, roleFilter, dateFilter])
 
   useEffect(() => {
     const t = setTimeout(fetchUsers, search ? 350 : 0)
@@ -266,7 +285,7 @@ const UserListView = () => {
 
       {/* Data Table */}
       <Card sx={{ boxShadow: 1 }}>
-        <CardHeader
+        {/* <CardHeader
           sx={{ pb: 1 }}
           title={
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -306,20 +325,66 @@ const UserListView = () => {
                   ))}
                 </Select>
               </FormControl>
-              {(search || roleFilter) && (
-                <Button size='small' onClick={() => { setSearch(''); setRoleFilter('') }}>
-                  Clear
+              {(search || roleFilter || dateFilter !== 'all') && (
+                <Button size='small' onClick={() => { setSearch(''); setRoleFilter(''); setDateFilter('all') }}>
+                  Clear All
                 </Button>
               )}
             </Box>
           }
-        />
+        /> */}
+        <Box sx={{ display: 'flex', alignItems: 'left', justifyContent: 'left', p:2, flexWrap: 'wrap', gap: 1 }}>
+            {/* <Typography variant='body2' color='text.secondary' sx={{ mr: 1, fontWeight: 600 }}>
+              <Icon icon='tabler:calendar-stats' fontSize={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+              Filter by:
+            </Typography> */}
+            <ButtonGroup
+              variant='outlined'
+              size='small'
+              disabled={loading}
+              sx={{
+                '& .MuiButton-root': {
+                  fontSize: '0.75rem',
+                  px: { xs: 1, sm: 1.5 },
+                  py: 0.5,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderColor: alpha(theme.palette.primary.main, 0.3),
+                  '&.active': {
+                    bgcolor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                    borderColor: theme.palette.primary.main,
+                    '&:hover': { bgcolor: theme.palette.primary.dark }
+                  }
+                }
+              }}
+            >
+              {DATE_FILTER_PRESETS.map(preset => (
+                <Button
+                  key={preset.value}
+                  onClick={() => { setDateFilter(preset.value); setPagination(p => ({ ...p, page: 0 })) }}
+                  className={dateFilter === preset.value ? 'active' : ''}
+                  sx={{
+                    ...(dateFilter === preset.value && {
+                      bgcolor: theme.palette.primary.main,
+                      color: theme.palette.primary.contrastText,
+                      '&:hover': { bgcolor: theme.palette.primary.dark }
+                    })
+                  }}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </ButtonGroup>
+          </Box>
         <Divider sx={{ mt: 1.5 }} />
         <CustomDataGrid
           columns={columns}
           rows={rows}
           loading={loading}
-          showToolbar={false}
+          showToolbar
+          showExport
+          exportFileName='users'
           paginationModel={pagination}
           onPaginationModelChange={setPagination}
           paginationMode='server'

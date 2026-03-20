@@ -10,6 +10,7 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
+import ButtonGroup from '@mui/material/ButtonGroup'
 import IconButton from '@mui/material/IconButton'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
@@ -19,18 +20,28 @@ import Tooltip from '@mui/material/Tooltip'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
+import { alpha, useTheme } from '@mui/material/styles'
 import { format } from 'date-fns'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import Icon from 'src/components/Icon'
 import Can from 'src/layouts/components/acl/Can'
-import { CustomDataGrid, CustomChip, AddDialog } from 'src/components/customComponent'
+import { CustomDataGrid, CustomChip, AddDialog, getDateRangeFromPreset } from 'src/components/customComponent'
 import { ConfirmDialog } from 'src/components/mui'
 import usePermissions from 'src/hooks/usePermissions'
 
 const fmtDate = d => {
   try { return format(new Date(d), 'dd MMM yyyy') } catch { return '—' }
 }
+
+/* ── Date Filter Presets ── */
+const DATE_FILTER_PRESETS = [
+  { label: 'Today', value: 'today' },
+  { label: 'Yesterday', value: 'yesterday' },
+  { label: 'Last 7 Days', value: 'last7days' },
+  { label: 'Last Month', value: 'lastMonth' },
+  { label: 'All Time', value: 'all' }
+]
 
 /** Build fields config for AddDialog */
 const getEventFields = (departments = [], isEdit = false) => {
@@ -108,6 +119,7 @@ const validateEvent = values => {
 
 const EventListView = () => {
   const router = useRouter()
+  const theme = useTheme()
   const { canCreate, canEdit, canDelete } = usePermissions()
 
   const [rows, setRows] = useState([])
@@ -115,6 +127,7 @@ const EventListView = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [dateFilter, setDateFilter] = useState('all')
   const [pagination, setPagination] = useState({ page: 0, pageSize: 10 })
   const [total, setTotal] = useState(0)
 
@@ -129,6 +142,12 @@ const EventListView = () => {
     try {
       const p = new URLSearchParams({ page: pagination.page + 1, limit: pagination.pageSize })
       if (statusFilter) p.set('status', statusFilter)
+
+      // Add date filters
+      const { from, to } = getDateRangeFromPreset(dateFilter)
+      if (from) p.set('dateFrom', from.toISOString())
+      if (to) p.set('dateTo', to.toISOString())
+
       const res = await axios.get(`/api/admin/events?${p}`)
       setRows(res.data.data || [])
       setTotal(res.data.pagination?.total || 0)
@@ -137,7 +156,7 @@ const EventListView = () => {
     } finally {
       setLoading(false)
     }
-  }, [pagination, statusFilter])
+  }, [pagination, statusFilter, dateFilter])
 
   useEffect(() => { fetchEvents() }, [fetchEvents])
   useEffect(() => {
@@ -288,26 +307,58 @@ const EventListView = () => {
 
       {/* Filters + DataGrid */}
       <Card sx={{ boxShadow: 1 }}>
-        <Box sx={{ p: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          <FormControl size='small' sx={{ minWidth: 140 }}>
-            <InputLabel>Status</InputLabel>
-            <Select value={statusFilter} label='Status'
-              onChange={e => { setStatusFilter(e.target.value); setPagination(p => ({ ...p, page: 0 })) }}>
-              <MenuItem value=''>All</MenuItem>
-              {['draft', 'published', 'active', 'cancelled', 'completed'].map(s => (
-                <MenuItem key={s} value={s} sx={{ textTransform: 'capitalize' }}>{s}</MenuItem>
+        <Box sx={{ display: 'flex', alignItems: 'left', justifyContent: 'left', p:2, flexWrap: 'wrap', gap: 1 }}>
+            {/* <Typography variant='body2' color='text.secondary' sx={{ mr: 1, fontWeight: 600 }}>
+              <Icon icon='tabler:calendar-stats' fontSize={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+              Filter by:
+            </Typography> */}
+            <ButtonGroup
+              variant='outlined'
+              size='small'
+              disabled={loading}
+              sx={{
+                '& .MuiButton-root': {
+                  fontSize: '0.75rem',
+                  px: { xs: 1, sm: 1.5 },
+                  py: 0.5,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderColor: alpha(theme.palette.primary.main, 0.3),
+                  '&.active': {
+                    bgcolor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                    borderColor: theme.palette.primary.main,
+                    '&:hover': { bgcolor: theme.palette.primary.dark }
+                  }
+                }
+              }}
+            >
+              {DATE_FILTER_PRESETS.map(preset => (
+                <Button
+                  key={preset.value}
+                  onClick={() => { setDateFilter(preset.value); setPagination(p => ({ ...p, page: 0 })) }}
+                  className={dateFilter === preset.value ? 'active' : ''}
+                  sx={{
+                    ...(dateFilter === preset.value && {
+                      bgcolor: theme.palette.primary.main,
+                      color: theme.palette.primary.contrastText,
+                      '&:hover': { bgcolor: theme.palette.primary.dark }
+                    })
+                  }}
+                >
+                  {preset.label}
+                </Button>
               ))}
-            </Select>
-          </FormControl>
-          {statusFilter && (
-            <Button size='small' onClick={() => setStatusFilter('')}>Clear</Button>
-          )}
-        </Box>
+            </ButtonGroup>
+          </Box>
         <Divider />
         <CustomDataGrid
           columns={columns}
           rows={rows}
           loading={loading}
+          showToolbar
+          showExport
+          exportFileName='events'
           paginationModel={pagination}
           onPaginationModelChange={setPagination}
           paginationMode='server'

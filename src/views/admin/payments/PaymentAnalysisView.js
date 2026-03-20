@@ -12,6 +12,7 @@ import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
+import ButtonGroup from '@mui/material/ButtonGroup'
 import Grid from '@mui/material/Grid'
 import Divider from '@mui/material/Divider'
 import Alert from '@mui/material/Alert'
@@ -29,7 +30,7 @@ import { alpha, useTheme } from '@mui/material/styles'
 import { format } from 'date-fns'
 import axios from 'axios'
 import Icon from 'src/components/Icon'
-import { CustomDataGrid, CustomChip, KPICard } from 'src/components/customComponent'
+import { CustomDataGrid, CustomChip, KPICard, getDateRangeFromPreset } from 'src/components/customComponent'
 import usePermissions from 'src/hooks/usePermissions'
 
 const ApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
@@ -42,6 +43,15 @@ const fmtDateShort = d => {
 }
 const fmtCurrency = v => `₹${Number(v || 0).toLocaleString('en-IN')}`
 
+/* ── Date Filter Presets ── */
+const DATE_FILTER_PRESETS = [
+  { label: 'Today', value: 'today' },
+  { label: 'Yesterday', value: 'yesterday' },
+  { label: 'Last 7 Days', value: 'last7days' },
+  { label: 'Last Month', value: 'lastMonth' },
+  { label: 'All Time', value: 'all' }
+]
+
 const PaymentAnalysisView = () => {
   const router = useRouter()
   const theme = useTheme()
@@ -50,6 +60,7 @@ const PaymentAnalysisView = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [dateFilter, setDateFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [stats, setStats] = useState(null)
@@ -65,6 +76,11 @@ const PaymentAnalysisView = () => {
       if (search) params.set('search', search)
       params.set('limit', '100')
 
+      // Add date filters
+      const { from, to } = getDateRangeFromPreset(dateFilter)
+      if (from) params.set('dateFrom', from.toISOString())
+      if (to) params.set('dateTo', to.toISOString())
+
       const [paymentRes, analyticsRes] = await Promise.all([
         axios.get(`/api/admin/payments?${params.toString()}`),
         axios.get('/api/admin/analytics?period=30').catch(() => ({ data: { data: null } }))
@@ -79,7 +95,7 @@ const PaymentAnalysisView = () => {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, search])
+  }, [statusFilter, search, dateFilter])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -240,6 +256,56 @@ const PaymentAnalysisView = () => {
                 Refresh
               </Button>
             </Box>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Date Filter */}
+      <Card sx={{ mb: 3, boxShadow: 1 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+          <Box sx={{ display: 'flex', alignItems: 'left', justifyContent: 'left', p:2, flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant='body2' color='text.secondary' sx={{ mr: 1, fontWeight: 600 }}>
+              <Icon icon='tabler:calendar-stats' fontSize={16} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+              Filter by:
+            </Typography>
+            <ButtonGroup
+              variant='outlined'
+              size='small'
+              disabled={loading}
+              sx={{
+                '& .MuiButton-root': {
+                  fontSize: '0.75rem',
+                  px: { xs: 1, sm: 1.5 },
+                  py: 0.5,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderColor: alpha(theme.palette.primary.main, 0.3),
+                  '&.active': {
+                    bgcolor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                    borderColor: theme.palette.primary.main,
+                    '&:hover': { bgcolor: theme.palette.primary.dark }
+                  }
+                }
+              }}
+            >
+              {DATE_FILTER_PRESETS.map(preset => (
+                <Button
+                  key={preset.value}
+                  onClick={() => setDateFilter(preset.value)}
+                  className={dateFilter === preset.value ? 'active' : ''}
+                  sx={{
+                    ...(dateFilter === preset.value && {
+                      bgcolor: theme.palette.primary.main,
+                      color: theme.palette.primary.contrastText,
+                      '&:hover': { bgcolor: theme.palette.primary.dark }
+                    })
+                  }}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </ButtonGroup>
           </Box>
         </CardContent>
       </Card>
@@ -434,6 +500,9 @@ const PaymentAnalysisView = () => {
           columns={txnCols}
           rows={payments}
           loading={loading}
+          showToolbar
+          showExport
+          exportFileName='payments'
           paginationMode='client'
           paginationModel={{ page: 0, pageSize: 25 }}
           rowCount={payments.length}

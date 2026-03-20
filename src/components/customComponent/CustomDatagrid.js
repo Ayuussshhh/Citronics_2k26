@@ -1,7 +1,14 @@
 /**
  * CustomDataGrid — Reusable data table component
- * Desktop: MUI DataGrid with built-in GridToolbar (filter, column toggle, density, search)
+ * Desktop: MUI DataGrid with built-in GridToolbar (filter, column toggle, density, search, export)
  * Mobile:  Card-per-row responsive view with search
+ *
+ * Features:
+ * - Date range filter button group (Today, Yesterday, Last 7 Days, Last Month)
+ * - Export to CSV/Excel functionality
+ * - Column visibility toggle
+ * - Density selector
+ * - Quick search
  *
  * Single source of truth for all tabular data in the application.
  * Columns use DataGrid format: { field, headerName, flex?, minWidth?, renderCell?, sortable? }
@@ -12,7 +19,8 @@ import {
   GridToolbarColumnsButton,
   GridToolbarFilterButton,
   GridToolbarDensitySelector,
-  GridToolbarQuickFilter
+  GridToolbarQuickFilter,
+  GridToolbarExport
 } from '@mui/x-data-grid'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
@@ -24,69 +32,252 @@ import InputAdornment from '@mui/material/InputAdornment'
 import Pagination from '@mui/material/Pagination'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
+import Button from '@mui/material/Button'
+import ButtonGroup from '@mui/material/ButtonGroup'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import Tooltip from '@mui/material/Tooltip'
 import { useTheme, alpha } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
+import { format, subDays, startOfDay, endOfDay, startOfMonth, subMonths } from 'date-fns'
 import Icon from 'src/components/Icon'
 
+/* ── Date Range Presets ── */
+const DATE_RANGE_PRESETS = [
+  { label: 'Today', value: 'today', getRange: () => ({ from: startOfDay(new Date()), to: endOfDay(new Date()) }) },
+  { label: 'Yesterday', value: 'yesterday', getRange: () => ({ from: startOfDay(subDays(new Date(), 1)), to: endOfDay(subDays(new Date(), 1)) }) },
+  { label: 'Last 7 Days', value: 'last7days', getRange: () => ({ from: startOfDay(subDays(new Date(), 6)), to: endOfDay(new Date()) }) },
+  { label: 'Last Month', value: 'lastMonth', getRange: () => ({ from: startOfMonth(subMonths(new Date(), 1)), to: endOfDay(new Date()) }) },
+  { label: 'All Time', value: 'all', getRange: () => ({ from: null, to: null }) }
+]
+
+/* ── Date Filter Button Group ── */
+function DateFilterButtonGroup({ value, onChange, disabled }) {
+  const theme = useTheme()
+
+  return (
+    <ButtonGroup
+      variant='outlined'
+      size='small'
+      disabled={disabled}
+      sx={{
+        '& .MuiButton-root': {
+          fontSize: '0.75rem',
+          px: 1.5,
+          py: 0.5,
+          textTransform: 'none',
+          fontWeight: 600,
+          borderColor: alpha(theme.palette.primary.main, 0.3),
+          '&.Mui-selected, &.active': {
+            bgcolor: theme.palette.primary.main,
+            color: theme.palette.primary.contrastText,
+            borderColor: theme.palette.primary.main,
+            '&:hover': {
+              bgcolor: theme.palette.primary.dark
+            }
+          }
+        }
+      }}
+    >
+      {DATE_RANGE_PRESETS.map(preset => (
+        <Button
+          key={preset.value}
+          onClick={() => onChange(preset.value)}
+          className={value === preset.value ? 'active' : ''}
+          sx={{
+            ...(value === preset.value && {
+              bgcolor: theme.palette.primary.main,
+              color: theme.palette.primary.contrastText,
+              '&:hover': { bgcolor: theme.palette.primary.dark }
+            })
+          }}
+        >
+          {preset.label}
+        </Button>
+      ))}
+    </ButtonGroup>
+  )
+}
+
+/* ── Export Menu ── */
+function ExportMenu({ rows, columns, fileName = 'export' }) {
+  const [anchorEl, setAnchorEl] = useState(null)
+  const open = Boolean(anchorEl)
+
+  const handleExportCSV = () => {
+    const headers = columns.filter(c => c.field !== 'actions').map(c => c.headerName || c.field)
+    const fields = columns.filter(c => c.field !== 'actions').map(c => c.field)
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row =>
+        fields.map(field => {
+          const value = row[field]
+          if (value == null) return ''
+          const strVal = String(value).replace(/"/g, '""')
+          return strVal.includes(',') || strVal.includes('"') || strVal.includes('\n')
+            ? `"${strVal}"`
+            : strVal
+        }).join(',')
+      )
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `${fileName}_${format(new Date(), 'yyyy-MM-dd_HHmm')}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+    setAnchorEl(null)
+  }
+
+  return (
+    <>
+      <Tooltip title='Export'>
+        <Button
+          size='small'
+          onClick={e => setAnchorEl(e.currentTarget)}
+          startIcon={<Icon icon='tabler:download' fontSize={16} />}
+          sx={{ fontSize: '0.8rem', textTransform: 'none' }}
+        >
+          Export
+        </Button>
+      </Tooltip>
+      <Menu anchorEl={anchorEl} open={open} onClose={() => setAnchorEl(null)}>
+        <MenuItem onClick={handleExportCSV}>
+          <Icon icon='tabler:file-spreadsheet' fontSize={18} style={{ marginRight: 8 }} />
+          Export as CSV
+        </MenuItem>
+      </Menu>
+    </>
+  )
+}
+
 /* ── Desktop Toolbar ── */
-function GridToolbar() {
+function GridToolbar({ showExport, showDateFilter, dateFilter, onDateFilterChange, rows, columns, exportFileName }) {
   return (
     <Box
       sx={{
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
+        flexDirection: 'column',
         gap: 1.5,
         px: 2.5,
         py: 1.5,
         borderBottom: t => `1px solid ${t.palette.divider}`
       }}
     >
-      <Stack direction='row' spacing={0.5} alignItems='center'>
-        <GridToolbarColumnsButton sx={{ fontSize: '0.8rem' }} />
-        <GridToolbarFilterButton sx={{ fontSize: '0.8rem' }} />
-        <GridToolbarDensitySelector sx={{ fontSize: '0.8rem' }} />
-      </Stack>
-      <GridToolbarQuickFilter
-        debounceMs={300}
+      {/* Date Filter Row */}
+      {showDateFilter && (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <DateFilterButtonGroup value={dateFilter} onChange={onDateFilterChange} />
+        </Box>
+      )}
+
+      {/* Tools Row */}
+      <Box
         sx={{
-          '& .MuiInputBase-root': { fontSize: '0.875rem', borderRadius: 2 },
-          minWidth: 220,
-          maxWidth: 320
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1.5
         }}
-        placeholder='Search…'
-      />
+      >
+        <Stack direction='row' spacing={0.5} alignItems='center'>
+          <GridToolbarColumnsButton sx={{ fontSize: '0.8rem' }} />
+          <GridToolbarFilterButton sx={{ fontSize: '0.8rem' }} />
+          <GridToolbarDensitySelector sx={{ fontSize: '0.8rem' }} />
+          {showExport && <ExportMenu rows={rows} columns={columns} fileName={exportFileName} />}
+        </Stack>
+        <GridToolbarQuickFilter
+          debounceMs={300}
+          sx={{
+            '& .MuiInputBase-root': { fontSize: '0.875rem', borderRadius: 2 },
+            minWidth: 220,
+            maxWidth: 320
+          }}
+          placeholder='Search…'
+        />
+      </Box>
     </Box>
   )
 }
 
 /* ── Mobile Search Bar ── */
-function MobileSearchBar({ value, onChange }) {
+function MobileSearchBar({ value, onChange, showDateFilter, dateFilter, onDateFilterChange, showExport, rows, columns, exportFileName }) {
+  const theme = useTheme()
+
   return (
     <Box sx={{ px: 2, pt: 2, pb: 1.5 }}>
-      <TextField
-        fullWidth
-        size='small'
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder='Search…'
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position='start'>
-              <Icon icon='tabler:search' fontSize={18} />
-            </InputAdornment>
-          ),
-          endAdornment: value ? (
-            <InputAdornment position='end'>
-              <IconButton size='small' onClick={() => onChange('')} edge='end'>
-                <Icon icon='tabler:x' fontSize={16} />
-              </IconButton>
-            </InputAdornment>
-          ) : null,
-          sx: { borderRadius: 2 }
-        }}
-      />
+      {/* Date Filter for Mobile */}
+      {showDateFilter && (
+        <Box sx={{ mb: 1.5, overflowX: 'auto', pb: 0.5 }}>
+          <ButtonGroup
+            variant='outlined'
+            size='small'
+            sx={{
+              '& .MuiButton-root': {
+                fontSize: '0.68rem',
+                px: 1,
+                py: 0.4,
+                textTransform: 'none',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                borderColor: alpha(theme.palette.primary.main, 0.3),
+                '&.active': {
+                  bgcolor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  borderColor: theme.palette.primary.main
+                }
+              }
+            }}
+          >
+            {DATE_RANGE_PRESETS.map(preset => (
+              <Button
+                key={preset.value}
+                onClick={() => onDateFilterChange(preset.value)}
+                className={dateFilter === preset.value ? 'active' : ''}
+                sx={{
+                  ...(dateFilter === preset.value && {
+                    bgcolor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText
+                  })
+                }}
+              >
+                {preset.label}
+              </Button>
+            ))}
+          </ButtonGroup>
+        </Box>
+      )}
+
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <TextField
+          fullWidth
+          size='small'
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder='Search…'
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position='start'>
+                <Icon icon='tabler:search' fontSize={18} />
+              </InputAdornment>
+            ),
+            endAdornment: value ? (
+              <InputAdornment position='end'>
+                <IconButton size='small' onClick={() => onChange('')} edge='end'>
+                  <Icon icon='tabler:x' fontSize={16} />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
+            sx: { borderRadius: 2 }
+          }}
+        />
+        {showExport && (
+          <ExportMenu rows={rows} columns={columns} fileName={exportFileName} />
+        )}
+      </Box>
     </Box>
   )
 }
@@ -182,6 +373,11 @@ const CustomDataGrid = ({
   rowCount = 0,
   disableRowSelectionOnClick = true,
   showToolbar = true,
+  showExport = true,
+  showDateFilter = false,
+  dateFilter = 'all',
+  onDateFilterChange,
+  exportFileName = 'export',
   emptyText = 'No records found.',
   onRowClick,
   getRowId = (row) => row.id,
@@ -226,7 +422,21 @@ const CustomDataGrid = ({
         rowCount={rowCount}
         disableRowSelectionOnClick={disableRowSelectionOnClick}
         onRowClick={onRowClick}
-        slots={{ toolbar: showToolbar ? GridToolbar : null }}
+        slots={{
+          toolbar: showToolbar
+            ? () => (
+                <GridToolbar
+                  showExport={showExport}
+                  showDateFilter={showDateFilter}
+                  dateFilter={dateFilter}
+                  onDateFilterChange={onDateFilterChange}
+                  rows={rows}
+                  columns={columns}
+                  exportFileName={exportFileName}
+                />
+              )
+            : null
+        }}
         rowHeight={56}
         sx={{
           border: 'none',
@@ -296,7 +506,19 @@ const CustomDataGrid = ({
 
   return (
     <Box>
-      {showToolbar && <MobileSearchBar value={mobileSearch} onChange={setMobileSearch} />}
+      {showToolbar && (
+        <MobileSearchBar
+          value={mobileSearch}
+          onChange={setMobileSearch}
+          showDateFilter={showDateFilter}
+          dateFilter={dateFilter}
+          onDateFilterChange={onDateFilterChange}
+          showExport={showExport}
+          rows={rows}
+          columns={columns}
+          exportFileName={exportFileName}
+        />
+      )}
 
       <Box sx={{ px: 2, pb: 2 }}>
         {/* Loading */}
@@ -379,3 +601,13 @@ const CustomDataGrid = ({
 }
 
 export default CustomDataGrid
+
+// Export date range presets for use in other components
+export { DATE_RANGE_PRESETS }
+
+// Helper function to get date range from preset value
+export const getDateRangeFromPreset = (presetValue) => {
+  const preset = DATE_RANGE_PRESETS.find(p => p.value === presetValue)
+  if (!preset) return { from: null, to: null }
+  return preset.getRange()
+}

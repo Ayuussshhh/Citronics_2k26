@@ -438,7 +438,7 @@ const AnalyticsView = () => {
             ]}
             rows={recentTxns}
             loading={loading}
-            showToolbar={false}
+            showToolbar
             paginationMode='client'
             paginationModel={{ page: 0, pageSize: 10 }}
             rowCount={recentTxns.length}

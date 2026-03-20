@@ -157,10 +157,8 @@ const EventDetailView = () => {
           <Avatar sx={{ width: 30, height: 30, bgcolor: 'primary.main', fontSize: 12, fontWeight: 700 }}>
             {row.user_name?.[0]?.toUpperCase() ?? 'U'}
           </Avatar>
-          <Box sx={{ minWidth: 0 }}>
             <Typography variant='body2' fontWeight={600} noWrap>{row.user_name || '—'}</Typography>
             <Typography variant='caption' color='text.secondary' noWrap>{row.user_email || ''}</Typography>
-          </Box>
         </Box>
       )
     },
