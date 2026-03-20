@@ -15,15 +15,16 @@ import themeConfig from 'src/configs/themeConfig'
 const LINK_COLUMN_1 = [
   { label: 'About CDGI', href: '/about' },
   { label: 'About Citronics', href: '/about-citronics' },
-  { label: 'Contact Us', href: '#' },
+  { label: 'About Developers', href: '/developers' },
 
-  { label: 'Privacy Policy', href: '/privacy-policy' }
+
+
 ]
 
 const LINK_COLUMN_2 = [
  { label: 'Core Team', href: '/team' },
   { label: 'Gallery', href: '/gallery' },
- 
+   { label: 'Privacy Policy', href: '/privacy-policy' }
 
 
 ]
@@ -264,30 +265,7 @@ export default function Footer() {
               order: { xs: 2, md: 3 }
             }}
           >
-            <Box
-              component='img'
-              src='/logo/citronics2.png'
-              alt={`${themeConfig.templateName} Badge`}
-              sx={{
-                width: 100,
-                height: 32,
-                objectFit: 'contain',
-                objectPosition: 'right'
-              }}
-            />
-            <Typography
-              variant='caption'
-              sx={{
-                color: c.isDark ? c.whiteA40 : c.textPrimaryA50,
-                fontWeight: 600,
-                lineHeight: 1.4,
-                whiteSpace: 'nowrap'
-              }}
-            >
-              CDGI Technical Fest
-              <br />
-              Event Management
-            </Typography>
+           
           </Box>
         </Box>
       </Box>

@@ -61,6 +61,7 @@ const eventService = {
         e.name          AS title,
         e.tagline,
         e.start_time,
+        e.end_time,
         e.venue,
         e.max_tickets   AS seats,
         e.registered,
@@ -69,6 +70,7 @@ const eventService = {
         e.featured,
         e.images,
         e.ticket_price,
+        e.registration_link,
         e.date,
         d.id            AS "departmentId",
         d.name          AS "departmentName",
@@ -173,6 +175,7 @@ const eventService = {
         e.status,
         e.images,
         e.ticket_price,
+        e.registration_link,
         e.date,
         d.id            AS "departmentId",
         d.name          AS "departmentName",
@@ -252,6 +255,7 @@ const eventService = {
         e.status,
         e.images,
         e.ticket_price,
+        e.registration_link,
         e.created_at,
         d.id            AS "departmentId",
         d.name          AS "departmentName",
@@ -263,7 +267,7 @@ const eventService = {
         ed.brief        AS "detailBrief",
         ed.rules        AS "detailRules",
         ed.rounds       AS "detailRounds",
-        ed.team_size    AS "detailTeamSize",
+        ed.team_size_text AS "detailTeamSizeText",
         ed.evaluation_criteria AS "detailEvaluationCriteria"
       FROM events e
       LEFT JOIN departments d ON d.id = e.department_id
@@ -277,7 +281,7 @@ const eventService = {
     if (!row) return null
 
     // Shape the response with a nested details object
-    const { detailPrize, detailDocumentUrl, detailBrief, detailRules, detailRounds, detailTeamSize, detailEvaluationCriteria, ...event } = row
+    const { detailPrize, detailDocumentUrl, detailBrief, detailRules, detailRounds, detailTeamSizeText, detailEvaluationCriteria, ...event } = row
 
     return {
       ...event,
@@ -287,7 +291,7 @@ const eventService = {
         brief: detailBrief || '',
         rules: detailRules || [],
         rounds: detailRounds || null,
-        team_size: detailTeamSize || null,
+        team_size_text: detailTeamSizeText || null,
         evaluation_criteria: detailEvaluationCriteria || []
       }
     }
@@ -312,6 +316,7 @@ const eventService = {
         e.featured,
         e.images,
         e.ticket_price,
+        e.registration_link,
         d.id            AS "departmentId",
         d.name          AS "departmentName",
         e.date,
