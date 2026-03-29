@@ -58,6 +58,7 @@ const PaymentAnalysisView = () => {
   const { canViewPayments } = usePermissions()
 
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [dateFilter, setDateFilter] = useState('all')
@@ -105,6 +106,73 @@ const PaymentAnalysisView = () => {
 
   const handleSearch = () => setSearch(searchInput.trim())
   const handleSearchKeyDown = e => { if (e.key === 'Enter') handleSearch() }
+
+  // Escape a single CSV field: quote when it contains commas/quotes/newlines,
+  // and prefix formula-triggering characters to prevent spreadsheet injection.
+  const escapeCSVField = val => {
+    if (val == null) return ''
+    let str = String(val)
+    // Sanitize formula injection — prefix with single quote
+    if (/^[=+\-@\t\r]/.test(str)) str = "'" + str
+    str = str.replace(/"/g, '""')
+    return str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')
+      ? `"${str}"`
+      : str
+  }
+
+  const handleExportAll = async () => {
+    setExporting(true)
+    setError('')
+    try {
+      const params = new URLSearchParams()
+      if (statusFilter) params.set('status', statusFilter)
+      if (search) params.set('search', search)
+      params.set('limit', '10000')
+      params.set('export', 'true')
+
+      const { from, to } = getDateRangeFromPreset(dateFilter)
+      if (from) params.set('dateFrom', from.toISOString())
+      if (to) params.set('dateTo', to.toISOString())
+
+      const res = await axios.get(`/api/admin/payments?${params.toString()}`)
+      const allPayments = res.data.data?.payments || []
+
+      if (allPayments.length === 0) {
+        setError('No payments to export')
+        return
+      }
+
+      const headers = ['Order ID', 'Juspay ID', 'Transaction ID', 'User', 'Email', 'Phone', 'Event', 'Amount', 'Qty', 'Status', 'Gateway Status', 'Date']
+      const csvContent = [
+        headers.join(','),
+        ...allPayments.map(row => [
+          escapeCSVField(row.id),
+          escapeCSVField(row.juspay_order_id),
+          escapeCSVField(row.transaction_id),
+          escapeCSVField(row.user_name),
+          escapeCSVField(row.user_email),
+          escapeCSVField(row.user_phone),
+          escapeCSVField(row.event_name),
+          row.total_amount || 0,
+          row.quantity || 1,
+          escapeCSVField(row.status),
+          escapeCSVField(row.gateway_status),
+          row.booked_at ? format(new Date(row.booked_at), 'yyyy-MM-dd HH:mm:ss') : ''
+        ].join(','))
+      ].join('\n')
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `payments_all_${format(new Date(), 'yyyy-MM-dd_HHmm')}.csv`
+      link.click()
+      URL.revokeObjectURL(link.href)
+    } catch (e) {
+      setError(e.response?.data?.error || 'Failed to export payments')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (!canViewPayments) {
     return (
@@ -280,6 +348,11 @@ const PaymentAnalysisView = () => {
                 startIcon={<Icon icon='tabler:refresh' fontSize={18} />}
                 onClick={fetchData} disabled={loading} sx={{ borderRadius: 2 }}>
                 Refresh
+              </Button>
+              <Button size='medium' variant='contained' color='success'
+                startIcon={<Icon icon='tabler:download' fontSize={18} />}
+                onClick={handleExportAll} disabled={loading || exporting} sx={{ borderRadius: 2 }}>
+                {exporting ? 'Exporting...' : 'Export All'}
               </Button>
             </Box>
           </Box>
