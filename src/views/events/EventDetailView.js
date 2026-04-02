@@ -233,8 +233,11 @@ export default function EventDetailView() {
   const currentImage = allImages[activeImageIndex] || null
   const hasGallery = allImages.length > 1
   const isOver = event.start_time ? new Date(event.start_time).getTime() <= Date.now() : false
-  const isRegClosed = !!event.registration_closed
-  const isDisabled = isRegClosed
+  // ctaState: 'closed' | 'soldout' | 'open'
+  const ctaState = !!event.registration_closed ? 'closed'
+    : (spotsLeft <= 0) ? 'soldout'
+    : 'open'
+  const isDisabled = ctaState !== 'open'
   const details = event.details || {}
 
   const hasPrizes = details.prize && typeof details.prize === 'object' && Object.keys(details.prize).length > 0
@@ -499,7 +502,7 @@ export default function EventDetailView() {
             {/* ── Mobile inline action buttons ── */}
             {isMobile && (
               <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {isRegClosed ? (
+                {ctaState !== 'open' ? (
                   <Button
                     variant='contained'
                     disableElevation
@@ -515,7 +518,7 @@ export default function EventDetailView() {
                       py: 1.5,
                     }}
                   >
-                    Registration Closed
+                    {ctaState === 'closed' ? 'Registration Closed' : 'Sold Out'}
                   </Button>
                 ) : event.registration_link ? (
                   <Button
@@ -572,7 +575,7 @@ export default function EventDetailView() {
                     Buy Now
                   </Button>
                 )}
-                {!isRegClosed && !event.registration_link && (
+                {ctaState === 'open' && !event.registration_link && (
                   <Button
                     variant='outlined'
                     fullWidth
@@ -1016,7 +1019,7 @@ export default function EventDetailView() {
             {/* ── Mobile inline action buttons ── */}
             {isMobile && (
               <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {isRegClosed ? (
+                {ctaState !== 'open' ? (
                   <Button
                     variant='contained'
                     disableElevation
@@ -1032,7 +1035,7 @@ export default function EventDetailView() {
                       py: 1.5,
                     }}
                   >
-                    Registration Closed
+                    {ctaState === 'closed' ? 'Registration Closed' : 'Sold Out'}
                   </Button>
                 ) : (
                   <>
@@ -1195,7 +1198,7 @@ export default function EventDetailView() {
           </Button>
 
           {/* Registration Link or Normal Purchase Buttons */}
-          {isRegClosed ? (
+          {ctaState !== 'open' ? (
             <Button
               variant='outlined'
               disableElevation
@@ -1212,7 +1215,7 @@ export default function EventDetailView() {
                 color: c.textDisabled,
               }}
             >
-              Registration Closed
+              {ctaState === 'closed' ? 'Registration Closed' : 'Sold Out'}
             </Button>
           ) : event.registration_link ? (
             // Registration Link Button (Desktop)

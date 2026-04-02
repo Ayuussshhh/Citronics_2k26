@@ -103,8 +103,12 @@ const EventCard = memo(function EventCard({ event, index }) {
   const accent = c.primary
   const isInCart = cartItems.some(item => item.eventId === event.id)
   const imageUrl = getEventImage(event)
-  const isRegClosed = !!event.registration_closed
-  const isDisabled = isRegClosed
+  const spotsLeft = event.seats > 0 ? event.seats - (event.registered || 0) : null
+  // ctaState: 'closed' | 'soldout' | 'open'
+  const ctaState = !!event.registration_closed ? 'closed'
+    : (spotsLeft !== null && spotsLeft <= 0) ? 'soldout'
+    : 'open'
+  const isDisabled = ctaState !== 'open'
   const displayDate = event.date || parseEventDate(event.start_time).full
   const time = formatEventTime(event.start_time)
 
@@ -183,7 +187,7 @@ const EventCard = memo(function EventCard({ event, index }) {
 
       {/* Mobile primary action row — xs only, shown horizontally below image */}
       <Box sx={{ display: { xs: 'flex', sm: 'none' }, px: 2.5, pt: 0, pb: 1.5, gap: 1 }}>
-        {isRegClosed ? (
+        {ctaState !== 'open' ? (
           <Button
             variant='contained'
             size='small'
@@ -201,7 +205,7 @@ const EventCard = memo(function EventCard({ event, index }) {
               py: 0.45,
             }}
           >
-            Registration Closed
+            {ctaState === 'closed' ? 'Registration Closed' : 'Sold Out'}
           </Button>
         ) : event.registration_link ? (
           <Button
@@ -364,7 +368,7 @@ const EventCard = memo(function EventCard({ event, index }) {
         >
           {/* Primary buttons — hidden on mobile (rendered above image) */}
           <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', gap: 1, width: '100%' }}>
-            {isRegClosed ? (
+            {ctaState !== 'open' ? (
               <Button
                 variant='contained'
                 size='small'
@@ -381,7 +385,7 @@ const EventCard = memo(function EventCard({ event, index }) {
                   textTransform: 'uppercase',
                 }}
               >
-                Registration Closed
+                {ctaState === 'closed' ? 'Registration Closed' : 'Sold Out'}
               </Button>
             ) : event.registration_link ? (
               <Button

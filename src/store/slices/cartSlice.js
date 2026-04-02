@@ -163,15 +163,18 @@ const cartSlice = createSlice({
         const dbEvents = action.payload
         const prevCount = state.items.length
 
-        // Update cart items with fresh DB prices and remove stale items
+        // Update cart items with fresh DB prices and mark unavailable items
         state.items = state.items
           .map(item => {
             const dbEvent = dbEvents.find(e => e.id === item.eventId)
-            if (!dbEvent) return null // event no longer exists/published
+            if (!dbEvent) {
+              // Event no longer exists/published — mark as unavailable (maxAvailable = 0) instead of removing
+              return { ...item, maxAvailable: 0, registrationClosed: false }
+            }
 
             // Registration closed — mark it but keep in cart so user sees reason
             if (dbEvent.registration_closed) {
-              return { ...item, title: dbEvent.title, registrationClosed: true }
+              return { ...item, title: dbEvent.title, registrationClosed: true, maxAvailable: null }
             }
 
             const dbAvailable = Math.max(0, (dbEvent.seats || 0) - (dbEvent.registered || 0))
