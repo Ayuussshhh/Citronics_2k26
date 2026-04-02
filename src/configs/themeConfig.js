@@ -42,7 +42,7 @@ const themeConfig = {
 
   // ** Event Platform
   maxFileUploadMB: 10,
-  defaultTimezone: 'UTC',
+  defaultTimezone: 'Asia/Kolkata',
   dateFormat: 'MMM DD, YYYY',
   timeFormat: 'hh:mm A'
 }
