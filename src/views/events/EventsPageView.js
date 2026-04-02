@@ -103,8 +103,8 @@ const EventCard = memo(function EventCard({ event, index }) {
   const accent = c.primary
   const isInCart = cartItems.some(item => item.eventId === event.id)
   const imageUrl = getEventImage(event)
-  const spotsLeft = event.seats > 0 ? event.seats - (event.registered || 0) : null
-  const almostFull = spotsLeft !== null && spotsLeft <= Math.ceil(event.seats * 0.2)
+  const isRegClosed = !!event.registration_closed
+  const isDisabled = isRegClosed
   const displayDate = event.date || parseEventDate(event.start_time).full
   const time = formatEventTime(event.start_time)
 
@@ -183,7 +183,27 @@ const EventCard = memo(function EventCard({ event, index }) {
 
       {/* Mobile primary action row — xs only, shown horizontally below image */}
       <Box sx={{ display: { xs: 'flex', sm: 'none' }, px: 2.5, pt: 0, pb: 1.5, gap: 1 }}>
-        {event.registration_link ? (
+        {isRegClosed ? (
+          <Button
+            variant='contained'
+            size='small'
+            disableElevation
+            disabled
+            sx={{
+              flex: 1,
+              height: 30,
+              minHeight: 0,
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
+              py: 0.45,
+            }}
+          >
+            Registration Closed
+          </Button>
+        ) : event.registration_link ? (
           <Button
             component='a'
             href={event.registration_link}
@@ -215,7 +235,7 @@ const EventCard = memo(function EventCard({ event, index }) {
               variant='contained'
               size='small'
               disableElevation
-              disabled={isInCart}
+              disabled={isDisabled || isInCart}
               onClick={() => dispatch(addToCart({
                 eventId: event.id,
                 title: event.title,
@@ -247,7 +267,7 @@ const EventCard = memo(function EventCard({ event, index }) {
               variant='outlined'
               size='small'
               disableElevation
-              disabled={spotsLeft !== null && spotsLeft <= 0}
+              disabled={isDisabled}
               onClick={() => {
                 dispatch(setCheckoutItems({
                   items: [{ eventId: event.id, quantity: 1 }],
@@ -275,7 +295,7 @@ const EventCard = memo(function EventCard({ event, index }) {
                 '&:hover': { borderColor: accent, bgcolor: alpha(accent, 0.08) },
               }}
             >
-              {spotsLeft !== null && spotsLeft <= 0 ? 'Sold Out' : 'Buy Ticket'}
+              Buy Ticket
             </Button>
           </>
         )}
@@ -307,24 +327,6 @@ const EventCard = memo(function EventCard({ event, index }) {
           >
             {event.title}
           </Typography>
-
-          {almostFull && spotsLeft !== null && (
-            <CustomChip
-              label={spotsLeft <= 0 ? 'Sold Out' : `${spotsLeft} Spot${spotsLeft !== 1 ? 's' : ''} Left`}
-              size='small'
-              sx={{
-                mb: 2,
-                height: 24,
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                letterSpacing: '0.02em',
-                background: spotsLeft <= 0 ? c.errorA15 : alpha(c.warning, 0.12),
-                color: spotsLeft <= 0 ? c.error : c.warning,
-                border: `1px solid ${spotsLeft <= 0 ? c.errorA20 : alpha(c.warning, 0.2)}`,
-                '& .MuiChip-label': { px: 1.5 }
-              }}
-            />
-          )}
 
           {/* Metadata table */}
           <Box
@@ -362,7 +364,26 @@ const EventCard = memo(function EventCard({ event, index }) {
         >
           {/* Primary buttons — hidden on mobile (rendered above image) */}
           <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', gap: 1, width: '100%' }}>
-            {event.registration_link ? (
+            {isRegClosed ? (
+              <Button
+                variant='contained'
+                size='small'
+                disableElevation
+                disabled
+                sx={{
+                  width: '100%',
+                  minWidth: 150,
+                  height: 40,
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Registration Closed
+              </Button>
+            ) : event.registration_link ? (
               <Button
                 component='a'
                 href={event.registration_link}
@@ -394,7 +415,7 @@ const EventCard = memo(function EventCard({ event, index }) {
                   variant='contained'
                   size='small'
                   disableElevation
-                  disabled={isInCart}
+                  disabled={isDisabled || isInCart}
                   onClick={() => dispatch(addToCart({
                     eventId: event.id,
                     title: event.title,
@@ -426,7 +447,7 @@ const EventCard = memo(function EventCard({ event, index }) {
                   variant='contained'
                   size='small'
                   disableElevation
-                  disabled={spotsLeft !== null && spotsLeft <= 0}
+                  disabled={isDisabled}
                   onClick={() => {
                     dispatch(setCheckoutItems({
                       items: [{ eventId: event.id, quantity: 1 }],
@@ -455,7 +476,7 @@ const EventCard = memo(function EventCard({ event, index }) {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {spotsLeft !== null && spotsLeft <= 0 ? 'Sold Out' : 'Buy Ticket'}
+                  Buy Ticket
                 </Button>
               </>
             )}

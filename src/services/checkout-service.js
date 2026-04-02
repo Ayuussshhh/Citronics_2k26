@@ -46,6 +46,7 @@ const checkoutService = {
           e.images,
           e.status,
           e.visibility,
+          e.registration_closed,
           d.name          AS "departmentName"
         FROM events e
         LEFT JOIN departments d ON d.id = e.department_id
@@ -64,6 +65,11 @@ const checkoutService = {
 
       if (event.visibility !== 'public') {
         errors.push({ eventId, message: 'Event is not publicly accessible' })
+        continue
+      }
+
+      if (event.registration_closed) {
+        errors.push({ eventId, message: 'Registration is closed for this event' })
         continue
       }
 
