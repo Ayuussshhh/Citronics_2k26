@@ -68,14 +68,13 @@ const paymentService = {
         // Lock event row for consistent availability check
         const event = await t.oneOrNone(`
           SELECT id, name AS title, ticket_price, max_tickets AS seats,
-                 registered, status, visibility, registration_closed
+                 registered, status, visibility
           FROM events WHERE id = $1 FOR UPDATE
         `, [eventId])
 
         if (!event) throw new Error(`Event ${eventId} not found`)
         if (event.status !== 'published') throw new Error(`Event "${event.title}" is not available`)
         if (event.visibility !== 'public') throw new Error(`Event "${event.title}" is not public`)
-        if (event.registration_closed) throw new Error(`Registration is closed for "${event.title}"`)
 
         const available = Math.max(0, (event.seats || 0) - (event.registered || 0))
         if (available <= 0) throw new Error(`Event "${event.title}" is sold out`)
