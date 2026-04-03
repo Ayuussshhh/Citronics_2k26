@@ -93,6 +93,7 @@ CREATE TABLE events (
     created_by    BIGINT,
     status        event_status NOT NULL DEFAULT 'draft',
     visibility    event_visibility NOT NULL DEFAULT 'public',
+    registration_closed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     manager_id    INTEGER,
@@ -108,6 +109,7 @@ CREATE INDEX idx_events_created_by       ON events(created_by);
 CREATE INDEX idx_events_active_published ON events(status, start_time) WHERE status IN ('published', 'active');
 CREATE INDEX idx_events_featured         ON events(featured) WHERE featured = TRUE;
 CREATE INDEX idx_events_registered       ON events(registered DESC);
+CREATE INDEX idx_events_registration_closed ON events(registration_closed);
 
 -- ── Bookings ───────────────────────────────────────────────────────────────────
 CREATE TABLE bookings (

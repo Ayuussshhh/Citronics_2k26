@@ -176,6 +176,7 @@ const eventService = {
         e.images,
         e.ticket_price,
         e.registration_link,
+        e.registration_closed,
         e.date,
         d.id            AS "departmentId",
         d.name          AS "departmentName",
@@ -256,6 +257,7 @@ const eventService = {
         e.images,
         e.ticket_price,
         e.registration_link,
+        e.registration_closed,
         e.created_at,
         d.id            AS "departmentId",
         d.name          AS "departmentName",
@@ -317,6 +319,7 @@ const eventService = {
         e.images,
         e.ticket_price,
         e.registration_link,
+        e.registration_closed,
         d.id            AS "departmentId",
         d.name          AS "departmentName",
         e.date,
@@ -358,6 +361,7 @@ const eventService = {
         e.venue,
         e.images,
         e.status,
+        e.registration_closed,
         d.name          AS "departmentName"
       FROM events e
       LEFT JOIN departments d ON d.id = e.department_id

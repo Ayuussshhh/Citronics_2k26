@@ -78,6 +78,7 @@ CREATE TABLE events (
     created_by BIGINT,
     status event_status NOT NULL DEFAULT 'draft',
     visibility event_visibility NOT NULL DEFAULT 'public',
+    registration_closed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
@@ -89,6 +90,7 @@ CREATE INDEX idx_events_start_time ON events(start_time);
 CREATE INDEX idx_events_status ON events(status);
 CREATE INDEX idx_events_created_by ON events(created_by);
 CREATE INDEX idx_events_active_published ON events(status, start_time) WHERE status IN ('published', 'active');
+CREATE INDEX idx_events_registration_closed ON events(registration_closed);
 
 -- Bookings table
 CREATE TABLE bookings (

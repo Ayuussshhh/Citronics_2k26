@@ -105,6 +105,7 @@ const EventCard = memo(function EventCard({ event, index }) {
   const accent = c.primary
   const isInCart = cartItems.some(item => item.eventId === event.id)
   const imageUrl = getEventImage(event)
+  const isRegClosed = !!event.registration_closed
   const spotsLeft = event.seats > 0 ? event.seats - (event.registered || 0) : null
   const almostFull = spotsLeft !== null && spotsLeft <= Math.ceil(event.seats * 0.2)
   const displayDate = event.date || parseEventDate(event.start_time).full
@@ -185,7 +186,27 @@ const EventCard = memo(function EventCard({ event, index }) {
 
       {/* Mobile primary action row — xs only, shown horizontally below image */}
       <Box sx={{ display: { xs: 'flex', sm: 'none' }, px: 2.5, pt: 0, pb: 1.5, gap: 1 }}>
-        {event.registration_link ? (
+        {isRegClosed ? (
+          <Button
+            variant='contained'
+            size='small'
+            disableElevation
+            disabled
+            sx={{
+              flex: 1,
+              height: 30,
+              minHeight: 0,
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
+              py: 0.45,
+            }}
+          >
+            Registration Closed
+          </Button>
+        ) : event.registration_link ? (
           <Button
             component='a'
             href={event.registration_link}
@@ -364,7 +385,26 @@ const EventCard = memo(function EventCard({ event, index }) {
         >
           {/* Primary buttons — hidden on mobile (rendered above image) */}
           <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', gap: 1, width: '100%' }}>
-            {event.registration_link ? (
+            {isRegClosed ? (
+              <Button
+                variant='contained'
+                size='small'
+                disableElevation
+                disabled
+                sx={{
+                  width: '100%',
+                  minWidth: 150,
+                  height: 40,
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Registration Closed
+              </Button>
+            ) : event.registration_link ? (
               <Button
                 component='a'
                 href={event.registration_link}

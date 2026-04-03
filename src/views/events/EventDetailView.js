@@ -235,6 +235,7 @@ export default function EventDetailView() {
   const currentImage = allImages[activeImageIndex] || null
   const hasGallery = allImages.length > 1
   const isOver = event.start_time ? new Date(event.start_time).getTime() <= Date.now() : false
+  const isRegClosed = !!event.registration_closed
   const details = event.details || {}
 
   const hasPrizes = details.prize && typeof details.prize === 'object' && Object.keys(details.prize).length > 0
@@ -499,7 +500,25 @@ export default function EventDetailView() {
             {/* ── Mobile inline action buttons ── */}
             {isMobile && (
               <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {event.registration_link ? (
+                {isRegClosed ? (
+                  <Button
+                    variant='contained'
+                    disableElevation
+                    fullWidth
+                    disabled
+                    sx={{
+                      bgcolor: c.dividerA30,
+                      color: c.textDisabled,
+                      borderRadius: '12px',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      textTransform: 'none',
+                      py: 1.5,
+                    }}
+                  >
+                    Registration Closed
+                  </Button>
+                ) : event.registration_link ? (
                   <Button
                     variant='contained'
                     disableElevation
@@ -554,7 +573,7 @@ export default function EventDetailView() {
                     {spotsLeft <= 0 ? 'Sold Out' : 'Buy Now'}
                   </Button>
                 )}
-                {!event.registration_link && (
+                {!isRegClosed && !event.registration_link && (
                   <Button
                     variant='outlined'
                     fullWidth
@@ -998,6 +1017,26 @@ export default function EventDetailView() {
             {/* ── Mobile inline action buttons ── */}
             {isMobile && (
               <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {isRegClosed ? (
+                  <Button
+                    variant='contained'
+                    disableElevation
+                    fullWidth
+                    disabled
+                    sx={{
+                      bgcolor: c.dividerA30,
+                      color: c.textDisabled,
+                      borderRadius: '12px',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      textTransform: 'none',
+                      py: 1.5,
+                    }}
+                  >
+                    Registration Closed
+                  </Button>
+                ) : (
+                <>
                 <Button
                   variant='contained'
                   disableElevation
@@ -1058,6 +1097,8 @@ export default function EventDetailView() {
                 >
                   Add to Cart
                 </Button>
+                </>
+                )}
                 <Button
                   variant='outlined'
                   fullWidth
@@ -1155,7 +1196,25 @@ export default function EventDetailView() {
           </Button>
 
           {/* Registration Link or Normal Purchase Buttons */}
-          {event.registration_link ? (
+          {isRegClosed ? (
+            <Button
+              variant='outlined'
+              disableElevation
+              disabled
+              sx={{
+                borderRadius: '10px',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                textTransform: 'none',
+                px: { xs: 3, md: 5 },
+                height: 44,
+                borderColor: c.dividerA30,
+                color: c.textDisabled,
+              }}
+            >
+              Registration Closed
+            </Button>
+          ) : event.registration_link ? (
             // Registration Link Button (Desktop)
             <Button
               variant='outlined'

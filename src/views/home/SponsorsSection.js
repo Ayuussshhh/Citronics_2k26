@@ -16,6 +16,18 @@ const SPONSOR_CATEGORIES = [
     ]
   },
   {
+    category: 'Powered By',
+    logos: [
+      { name: 'Eicher', src: '/sponsors/EICHER__1_-removebg-preview.png' }
+    ]
+  },
+  {
+    category: 'Nutrition Partner',
+    logos: [
+      { name: 'Sanchi', src: '/sponsors/SANCHI__1__page-0001-removebg-preview.png' }
+    ]
+  },
+  {
     category: 'Community Partners',
     logos: [
       { name: 'Shekunj', src: '/sponsors/shekunj.png' },
@@ -26,6 +38,15 @@ const SPONSOR_CATEGORIES = [
     category: 'Media Partner',
     logos: [
       { name: 'Indore Talk', src: '/sponsors/indoretalkWhite.png' }
+    ]
+  },
+  {
+    category: 'Our Proud Sponsors',
+    logos: [
+      { name: 'Pisarv', src: '/sponsors/WhatsApp_Image_2026-04-03_at_13.02.15-removebg-preview.png' },
+      { name: 'Universal Informatics', src: '/sponsors/Universal_Logo-removebg-preview.png' },
+      { name: 'Study Metro', src: '/sponsors/sm_logo-removebg-preview.png' },
+      { name: 'Encode AI', src: '/sponsors/image.png' }
     ]
   }
 ]
@@ -75,8 +96,9 @@ export default function SponsorsSection() {
   // Cycle through categories: Community Partners stays for 2.4s (shows both), others for 2.4s each
   useEffect(() => {
     const currentCategory = SPONSOR_CATEGORIES[currentCategoryIndex]
-    // Community Partners (index 1) shows both logos at once, so only 1 "iteration"
-    const itemCount = currentCategory.category === 'Community Partners' ? 1 : currentCategory.logos.length
+    // Community Partners and Our Proud Sponsors show all logos at once
+    const showAll = currentCategory.category === 'Community Partners' || currentCategory.category === 'Our Proud Sponsors'
+    const itemCount = showAll ? 1 : currentCategory.logos.length
     const totalTime = itemCount * 2400
 
     const categoryTimer = setInterval(() => {
@@ -90,8 +112,9 @@ export default function SponsorsSection() {
   // Cycle through logos within current category (skip for Community Partners)
   useEffect(() => {
     const currentCategory = SPONSOR_CATEGORIES[currentCategoryIndex]
-    // Don't cycle through Community Partners - show both at once
-    if (currentCategory.category === 'Community Partners' || currentCategory.logos.length <= 1) return
+    // Don't cycle through categories that show all logos at once
+    const showAll = currentCategory.category === 'Community Partners' || currentCategory.category === 'Our Proud Sponsors'
+    if (showAll || currentCategory.logos.length <= 1) return
 
     const logoTimer = setInterval(() => {
       setCurrentLogoIndex(prev => (prev + 1) % currentCategory.logos.length)
@@ -200,8 +223,8 @@ export default function SponsorsSection() {
 
           {/* Animated Logo Display */}
           <AnimatePresence mode='wait'>
-            {currentCategory.category === 'Community Partners' ? (
-              // Show both Community Partner logos side by side
+            {(currentCategory.category === 'Community Partners' || currentCategory.category === 'Our Proud Sponsors') ? (
+              // Show all logos side by side
               <MotionBox
                 key={`${currentCategoryIndex}-both`}
                 initial={{ opacity: 0, scale: 0.8, y: 20 }}

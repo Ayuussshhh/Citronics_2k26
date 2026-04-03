@@ -128,6 +128,7 @@ function CartItem({ item, accent }) {
   const dispatch = useDispatch()
   const imageUrl = getItemImage(item)
   const subtotal = item.ticketPrice * item.quantity
+  const isUnavailable = !!item.registrationClosed
 
   return (
     <Box
@@ -136,7 +137,8 @@ function CartItem({ item, accent }) {
         gap: { xs: 2, md: 3 },
         py: { xs: 2.5, md: 3 },
         flexDirection: { xs: 'column', sm: 'row' },
-        alignItems: { xs: 'stretch', sm: 'flex-start' }
+        alignItems: { xs: 'stretch', sm: 'flex-start' },
+        opacity: isUnavailable ? 0.7 : 1
       }}
     >
       {/* Image */}
@@ -169,18 +171,40 @@ function CartItem({ item, accent }) {
       {/* Details */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
-          <Typography
-            variant='h6'
-            sx={{
-              fontWeight: 700,
-              fontSize: { xs: '1rem', md: '1.05rem' },
-              lineHeight: 1.3,
-              color: c.textPrimary,
-              mb: 0.5
-            }}
-          >
-            {item.title}
-          </Typography>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              variant='h6'
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: '1rem', md: '1.05rem' },
+                lineHeight: 1.3,
+                color: c.textPrimary,
+                mb: 0.5
+              }}
+            >
+              {item.title}
+            </Typography>
+            {isUnavailable && (
+              <Typography
+                variant='caption'
+                sx={{
+                  display: 'inline-block',
+                  bgcolor: alpha(c.error || '#f44336', 0.1),
+                  color: c.error || '#f44336',
+                  fontWeight: 700,
+                  px: 1,
+                  py: 0.2,
+                  borderRadius: '4px',
+                  fontSize: '0.72rem',
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                  mb: 0.5
+                }}
+              >
+                Registration Closed
+              </Typography>
+            )}
+          </Box>
 
           {/* Remove button */}
           <IconButton
@@ -232,13 +256,15 @@ function CartItem({ item, accent }) {
             <Typography variant='body2' sx={{ color: c.textSecondary, fontWeight: 500, fontSize: '0.85rem' }}>
               {formatCurrency(item.ticketPrice)} each
             </Typography>
-            <QuantityControl
-              quantity={item.quantity}
-              max={item.maxAvailable}
-              onDecrease={() => dispatch(updateQuantity({ eventId: item.eventId, quantity: item.quantity - 1 }))}
-              onIncrease={() => dispatch(updateQuantity({ eventId: item.eventId, quantity: item.quantity + 1 }))}
-              accent={accent}
-            />
+            {!isUnavailable && (
+              <QuantityControl
+                quantity={item.quantity}
+                max={item.maxAvailable}
+                onDecrease={() => dispatch(updateQuantity({ eventId: item.eventId, quantity: item.quantity - 1 }))}
+                onIncrease={() => dispatch(updateQuantity({ eventId: item.eventId, quantity: item.quantity + 1 }))}
+                accent={accent}
+              />
+            )}
             {/* availability label removed per UX request */}
           </Box>
           <Typography
@@ -316,6 +342,7 @@ export default function CartView() {
   const itemCount = useSelector(selectCartItemCount)
   const subtotal = useSelector(selectCartSubtotal)
   const { validating, hydrated, validationRemovedCount } = useSelector(state => state.cart)
+  const hasUnavailableItems = items.some(item => item.registrationClosed)
 
   // Validate on every cart page visit.
   // - Initial load: fires when hydrated flips false→true (after CartHydrator dispatches hydrateCart).
@@ -332,7 +359,7 @@ export default function CartView() {
   useEffect(() => {
     if (validationRemovedCount > 0) {
       toast.error(
-        `${validationRemovedCount} sold-out event${validationRemovedCount > 1 ? 's were' : ' was'} removed from your cart.`,
+        `${validationRemovedCount} event${validationRemovedCount > 1 ? 's were' : ' was'} removed from your cart (no longer available).`,
         { duration: 5000, id: 'cart-removal' }
       )
     }
@@ -514,11 +541,26 @@ export default function CartView() {
           </Box>
 
           {/* Checkout CTA */}
+          {hasUnavailableItems && (
+            <Typography
+              variant='caption'
+              sx={{
+                display: 'block',
+                mt: 2,
+                color: c.error || '#f44336',
+                fontWeight: 600,
+                textAlign: 'center',
+                fontSize: '0.8rem'
+              }}
+            >
+              Remove unavailable events from your cart to proceed.
+            </Typography>
+          )}
           <Button
             variant='contained'
             size='large'
             fullWidth
-            disabled={validating}
+            disabled={validating || hasUnavailableItems}
             endIcon={<Icon icon='tabler:arrow-right' />}
             onClick={async () => {
               // Re-validate prices and availability immediately before checkout

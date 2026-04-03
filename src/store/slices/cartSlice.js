@@ -18,7 +18,9 @@ function loadCart() {
 function persistCart(items) {
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    // Strip runtime-only flags before persisting — they are always refreshed from DB on validateCart
+    const stripped = items.map(({ registrationClosed, ...rest }) => rest)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
   } catch {
     /* quota exceeded — silently fail */
   }
@@ -80,10 +82,10 @@ const cartSlice = createSlice({
      *  Sanitizes loaded data to discard any corrupted items. */
     hydrateCart(state) {
       const raw = loadCart()
-      // Sanitize: discard items with missing eventId or quantity < 1
-      state.items = raw.filter(
-        item => item && item.eventId && typeof item.quantity === 'number' && item.quantity >= 1
-      )
+      // Sanitize: discard items with missing eventId or quantity < 1; strip stale runtime flags
+      state.items = raw
+        .filter(item => item && item.eventId && typeof item.quantity === 'number' && item.quantity >= 1)
+        .map(({ registrationClosed, ...rest }) => rest)
       state.hydrated = true
     },
 
@@ -161,16 +163,21 @@ const cartSlice = createSlice({
         const dbEvents = action.payload
         const prevCount = state.items.length
 
-        // Update cart items with fresh DB prices and remove stale items
+        // Update cart items with fresh DB prices and mark unavailable items
         state.items = state.items
           .map(item => {
             const dbEvent = dbEvents.find(e => e.id === item.eventId)
-            if (!dbEvent) return null // event no longer exists/published
+            if (!dbEvent) {
+              // Event no longer exists/published — mark as unavailable (maxAvailable = 0) instead of removing
+              return { ...item, maxAvailable: 0, registrationClosed: false }
+            }
+
+            // Registration closed — mark it but keep in cart so user sees reason
+            if (dbEvent.registration_closed) {
+              return { ...item, title: dbEvent.title, registrationClosed: true, maxAvailable: null }
+            }
 
             const dbAvailable = Math.max(0, (dbEvent.seats || 0) - (dbEvent.registered || 0))
-
-            // Sold out — remove from cart entirely
-            if (dbAvailable <= 0) return null
 
             return {
               ...item,
@@ -179,9 +186,9 @@ const cartSlice = createSlice({
               startTime: dbEvent.start_time,
               venue: dbEvent.venue || item.venue,
               image: dbEvent.images?.[0] || item.image,
-              maxAvailable: dbAvailable,
-              // Cap stored quantity to actual availability — no fallback to 1
-              quantity: Math.min(item.quantity, dbAvailable)
+              maxAvailable: dbAvailable || null,
+              registrationClosed: false,
+              quantity: item.quantity
             }
           })
           .filter(Boolean)
