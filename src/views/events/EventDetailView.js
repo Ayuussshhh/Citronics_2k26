@@ -32,7 +32,8 @@ function formatDate(iso) {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-    year: 'numeric'
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata'
   })
 }
 
@@ -41,7 +42,8 @@ function formatTime(iso) {
   return new Date(iso).toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: true
+    hour12: true,
+    timeZone: 'Asia/Kolkata'
   })
 }
 
@@ -543,7 +545,7 @@ export default function EventDetailView() {
                     variant='contained'
                     disableElevation
                     fullWidth
-                    disabled={isRegClosed}
+                    disabled={spotsLeft <= 0}
                     onClick={() => {
                       dispatch(setCheckoutItems({
                         items: [{ eventId: event.id, quantity: 1 }],
@@ -568,14 +570,14 @@ export default function EventDetailView() {
                       '&.Mui-disabled': { bgcolor: c.dividerA30, color: c.textDisabled }
                     }}
                   >
-                    Buy Now
+                    {spotsLeft <= 0 ? 'Sold Out' : 'Buy Now'}
                   </Button>
                 )}
                 {!isRegClosed && !event.registration_link && (
                   <Button
                     variant='outlined'
                     fullWidth
-                    disabled={isRegClosed}
+                    disabled={spotsLeft <= 0}
                     onClick={() => dispatch(addToCart({
                       eventId: event.id,
                       title: event.title,
@@ -1034,43 +1036,43 @@ export default function EventDetailView() {
                     Registration Closed
                   </Button>
                 ) : (
-                  <>
-                    <Button
-                      variant='contained'
-                      disableElevation
-                      fullWidth
-                      disabled={isRegClosed}
-                      onClick={() => {
-                        dispatch(setCheckoutItems({
-                          items: [{ eventId: event.id, quantity: 1 }],
-                          source: 'buyNow'
-                        }))
-                        if (session?.user?.id) {
-                          dispatch(setExistingUser({ userId: session.user.id }))
-                          router.push('/checkout')
-                        } else {
-                          router.push('/login?returnUrl=/checkout')
-                        }
-                      }}
-                      sx={{
-                        bgcolor: color,
-                        color: c.white,
-                        borderRadius: '12px',
-                        fontWeight: 700,
-                        fontSize: '0.95rem',
-                        textTransform: 'none',
-                        py: 1.5,
-                        '&:hover': { bgcolor: alpha(color, 0.88) },
-                        '&.Mui-disabled': { bgcolor: c.dividerA30, color: c.textDisabled }
-                      }}
-                    >
-                      Buy Now
-                    </Button>
-                    <Button
-                      variant='outlined'
-                      fullWidth
-                      disabled={isRegClosed}
-                      onClick={() => dispatch(addToCart({
+                <>
+                <Button
+                  variant='contained'
+                  disableElevation
+                  fullWidth
+                  disabled={spotsLeft <= 0}
+                  onClick={() => {
+                    dispatch(setCheckoutItems({
+                      items: [{ eventId: event.id, quantity: 1 }],
+                      source: 'buyNow'
+                    }))
+                    if (session?.user?.id) {
+                      dispatch(setExistingUser({ userId: session.user.id }))
+                      router.push('/checkout')
+                    } else {
+                      router.push('/login?returnUrl=/checkout')
+                    }
+                  }}
+                  sx={{
+                    bgcolor: color,
+                    color: c.white,
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    fontSize: '0.95rem',
+                    textTransform: 'none',
+                    py: 1.5,
+                    '&:hover': { bgcolor: alpha(color, 0.88) },
+                    '&.Mui-disabled': { bgcolor: c.dividerA30, color: c.textDisabled }
+                  }}
+                >
+                  {spotsLeft <= 0 ? 'Sold Out' : 'Buy Now'}
+                </Button>
+                <Button
+                  variant='outlined'
+                  fullWidth
+                  disabled={spotsLeft <= 0}
+                  onClick={() => dispatch(addToCart({
                     eventId: event.id,
                     title: event.title,
                     ticketPrice: event.ticket_price || 0,
@@ -1095,7 +1097,7 @@ export default function EventDetailView() {
                 >
                   Add to Cart
                 </Button>
-                  </>
+                </>
                 )}
                 <Button
                   variant='outlined'
@@ -1201,8 +1203,7 @@ export default function EventDetailView() {
               disabled
               sx={{
                 borderRadius: '10px',
-                fontFamily: fontFamilyHeading,
-                fontWeight: 800,
+                fontWeight: 700,
                 fontSize: '0.9rem',
                 textTransform: 'none',
                 px: { xs: 3, md: 5 },
@@ -1248,7 +1249,7 @@ export default function EventDetailView() {
               <Button
                 variant='outlined'
                 disableElevation
-                disabled={isRegClosed}
+                disabled={spotsLeft <= 0}
                 onClick={() => dispatch(addToCart({
                   eventId: event.id,
                   title: event.title,
@@ -1287,7 +1288,7 @@ export default function EventDetailView() {
               <Button
                 variant='outlined'
                 disableElevation
-                disabled={isRegClosed}
+                disabled={spotsLeft <= 0}
                 onClick={() => {
                   dispatch(setCheckoutItems({
                     items: [{ eventId: event.id, quantity: 1 }],
@@ -1308,9 +1309,9 @@ export default function EventDetailView() {
                   textTransform: 'none',
                   px: { xs: 3, md: 5 },
                   height: 44,
-                  borderColor: c.bgPaper,
-                  color: color,
-                  bgcolor: c.bgPaper,
+                  borderColor: spotsLeft <= 0 ? c.dividerA30 : c.bgPaper,
+                  color: spotsLeft <= 0 ? c.textDisabled : color,
+                  bgcolor: spotsLeft <= 0 ? 'transparent' : c.bgPaper,
                   '&:hover': {
                     bgcolor: alpha(c.bgPaper, 0.88),
                     borderColor: c.bgPaper
@@ -1323,7 +1324,7 @@ export default function EventDetailView() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                Buy Now
+                {spotsLeft <= 0 ? 'Sold Out' : 'Buy Now'}
               </Button>
             </>
           )}

@@ -37,9 +37,11 @@ const EVENTS_PER_PAGE = 6
 function parseEventDate(iso) {
   if (!iso) return { full: '' }
   const d = new Date(iso)
-  const weekday = d.toLocaleDateString('en-US', { weekday: 'long' })
-  const month = d.toLocaleDateString('en-US', { month: 'long' })
-  return { full: `${weekday}, ${month} ${d.getDate()}, ${d.getFullYear()}` }
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' })
+  const month = d.toLocaleDateString('en-US', { month: 'long', timeZone: 'Asia/Kolkata' })
+  const day = d.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'Asia/Kolkata' })
+  const year = d.toLocaleDateString('en-US', { year: 'numeric', timeZone: 'Asia/Kolkata' })
+  return { full: `${weekday}, ${month} ${day}, ${year}` }
 }
 
 /**
@@ -50,7 +52,7 @@ function parseEventDate(iso) {
  */
 function formatEventTime(iso) {
   if (!iso) return ''
-  return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+  return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })
 }
 
 /**
@@ -103,8 +105,9 @@ const EventCard = memo(function EventCard({ event, index }) {
   const accent = c.primary
   const isInCart = cartItems.some(item => item.eventId === event.id)
   const imageUrl = getEventImage(event)
-  const spotsLeft = event.seats > 0 ? event.seats - (event.registered || 0) : null
   const isRegClosed = !!event.registration_closed
+  const spotsLeft = event.seats > 0 ? event.seats - (event.registered || 0) : null
+  const almostFull = spotsLeft !== null && spotsLeft <= Math.ceil(event.seats * 0.2)
   const displayDate = event.date || parseEventDate(event.start_time).full
   const time = formatEventTime(event.start_time)
 
@@ -235,7 +238,7 @@ const EventCard = memo(function EventCard({ event, index }) {
               variant='contained'
               size='small'
               disableElevation
-              disabled={isRegClosed || isInCart}
+              disabled={isInCart}
               onClick={() => dispatch(addToCart({
                 eventId: event.id,
                 title: event.title,
@@ -267,7 +270,7 @@ const EventCard = memo(function EventCard({ event, index }) {
               variant='outlined'
               size='small'
               disableElevation
-              disabled={isRegClosed}
+              disabled={spotsLeft !== null && spotsLeft <= 0}
               onClick={() => {
                 dispatch(setCheckoutItems({
                   items: [{ eventId: event.id, quantity: 1 }],
@@ -295,7 +298,7 @@ const EventCard = memo(function EventCard({ event, index }) {
                 '&:hover': { borderColor: accent, bgcolor: alpha(accent, 0.08) },
               }}
             >
-              Buy Ticket
+              {spotsLeft !== null && spotsLeft <= 0 ? 'Sold Out' : 'Buy Ticket'}
             </Button>
           </>
         )}
@@ -327,6 +330,24 @@ const EventCard = memo(function EventCard({ event, index }) {
           >
             {event.title}
           </Typography>
+
+          {almostFull && spotsLeft !== null && (
+            <CustomChip
+              label={spotsLeft <= 0 ? 'Sold Out' : `${spotsLeft} Spot${spotsLeft !== 1 ? 's' : ''} Left`}
+              size='small'
+              sx={{
+                mb: 2,
+                height: 24,
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+                background: spotsLeft <= 0 ? c.errorA15 : alpha(c.warning, 0.12),
+                color: spotsLeft <= 0 ? c.error : c.warning,
+                border: `1px solid ${spotsLeft <= 0 ? c.errorA20 : alpha(c.warning, 0.2)}`,
+                '& .MuiChip-label': { px: 1.5 }
+              }}
+            />
+          )}
 
           {/* Metadata table */}
           <Box
@@ -415,7 +436,7 @@ const EventCard = memo(function EventCard({ event, index }) {
                   variant='contained'
                   size='small'
                   disableElevation
-                  disabled={isRegClosed || isInCart}
+                  disabled={isInCart}
                   onClick={() => dispatch(addToCart({
                     eventId: event.id,
                     title: event.title,
@@ -447,7 +468,7 @@ const EventCard = memo(function EventCard({ event, index }) {
                   variant='contained'
                   size='small'
                   disableElevation
-                  disabled={isRegClosed}
+                  disabled={spotsLeft !== null && spotsLeft <= 0}
                   onClick={() => {
                     dispatch(setCheckoutItems({
                       items: [{ eventId: event.id, quantity: 1 }],
@@ -476,7 +497,7 @@ const EventCard = memo(function EventCard({ event, index }) {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  Buy Ticket
+                  {spotsLeft !== null && spotsLeft <= 0 ? 'Sold Out' : 'Buy Ticket'}
                 </Button>
               </>
             )}
