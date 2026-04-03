@@ -37,9 +37,11 @@ const EVENTS_PER_PAGE = 6
 function parseEventDate(iso) {
   if (!iso) return { full: '' }
   const d = new Date(iso)
-  const weekday = d.toLocaleDateString('en-US', { weekday: 'long' })
-  const month = d.toLocaleDateString('en-US', { month: 'long' })
-  return { full: `${weekday}, ${month} ${d.getDate()}, ${d.getFullYear()}` }
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' })
+  const month = d.toLocaleDateString('en-US', { month: 'long', timeZone: 'Asia/Kolkata' })
+  const day = d.toLocaleDateString('en-US', { day: 'numeric', timeZone: 'Asia/Kolkata' })
+  const year = d.toLocaleDateString('en-US', { year: 'numeric', timeZone: 'Asia/Kolkata' })
+  return { full: `${weekday}, ${month} ${day}, ${year}` }
 }
 
 /**
@@ -50,7 +52,7 @@ function parseEventDate(iso) {
  */
 function formatEventTime(iso) {
   if (!iso) return ''
-  return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+  return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })
 }
 
 /**
