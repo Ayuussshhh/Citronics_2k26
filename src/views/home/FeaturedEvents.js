@@ -725,7 +725,7 @@ export default function FeaturedEvents({ categoryEvents = [], loading = false })
         </Box>
 
         {/* ── Cards carousel ─────────────────────────────────────────── */}
-        <Box sx={{ position: 'relative', overflow: 'hidden', minHeight: { xs: 430, md: 480 } }}>
+        <Box sx={{ position: 'relative', overflow: 'hidden', minHeight: { xs: 1400, sm: 700, md: 480 } }}>
           <AnimatePresence mode='wait' custom={direction}>
             <MotionBox
               key={current.categoryId}
@@ -736,6 +736,10 @@ export default function FeaturedEvents({ categoryEvents = [], loading = false })
               exit='exit'
               transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
               sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
                 display: 'grid',
                 gridTemplateColumns: {
                   xs: '1fr',

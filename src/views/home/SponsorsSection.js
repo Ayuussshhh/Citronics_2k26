@@ -46,7 +46,9 @@ const SPONSOR_CATEGORIES = [
       { name: 'Pisarv', src: '/sponsors/WhatsApp_Image_2026-04-03_at_13.02.15-removebg-preview.png' },
       { name: 'Universal Informatics', src: '/sponsors/Universal_Logo-removebg-preview.png' },
       { name: 'Study Metro', src: '/sponsors/sm_logo-removebg-preview.png' },
-      { name: 'Encode AI', src: '/sponsors/image.png' }
+      { name: 'Encode AI', src: '/sponsors/image.png' },
+      { name: 'Quelwebs', src: '/sponsors/WhatsApp_Image_2026-04-04_at_11.37.13-removebg-preview.png' },
+       { name: 'study swift', src: '/sponsors/WhatsApp_Image_2026-04-04_at_11.37.49-removebg-preview.png' }
     ]
   }
 ]
