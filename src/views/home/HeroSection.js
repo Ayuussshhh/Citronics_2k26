@@ -529,63 +529,130 @@ export default function HeroSection({ loading = false }) {
             <Box
               sx={{
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 2.5,
+                flexDirection: { xs: 'column', md: 'row' },
+                alignItems: { xs: 'center', md: 'stretch' },
+                justifyContent: { xs: 'center', md: 'space-between' },
+                gap: { xs: 4, md: 4, lg: 6 },
                 mt: { xs: 2.5, md: 3.5 },
                 pt: { xs: 2, md: 3 },
-                borderTop: `1px solid ${heroBorder}`
+                borderTop: `1px solid ${heroBorder}`,
+                width: '100%',
+                px: { md: 6, lg: 10 }
               }}
             >
-              {/* Heading */}
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: '1.1rem', md: '1.3rem' },
-                  color: c.primary,
-                  letterSpacing: 1,
-                  textTransform: 'uppercase'
-                }}
-              >
-                Community Partners
-              </Typography>
+              {/* Left: Powered by Eicher */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: { md: 1 } }}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: '1.1rem', md: '1.3rem' },
+                    color: c.primary,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Powered by Eicher
+                </Typography>
+                {/* Logo wrapper — grows to fill remaining column height so logo aligns with centre */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                  <Box
+                    component='img'
+                    src='/sponsors/EICHER__1_-removebg-preview.png'
+                    alt='Powered by Eicher'
+                    sx={{
+                      width: { xs: 140, sm: 170, md: 200 },
+                      height: 'auto',
+                      objectFit: 'contain',
+                      filter: isDark ? 'drop-shadow(0 0 8px rgba(255,255,255,0.10))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.12))',
+                      transition: 'transform 0.3s ease',
+                      '&:hover': { transform: 'scale(1.08)' }
+                    }}
+                  />
+                </Box>
+              </Box>
 
-              {/* Logos */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: { xs: 2, sm: 3, md: 5 }
-                }}
-              >
-                <Box
-                  component='img'
-                  src='/sponsors/shekunj.png'
-                  alt='Shekunj - Community Partner'
+              {/* Centre: Community Partners (existing) */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: { md: 2 } }}>
+                <Typography
                   sx={{
-                    width: { xs: 140, sm: 170, md: 250 },
-                    height: 'auto',
-                    objectFit: 'contain',
-                    filter: isDark ? 'drop-shadow(0 0 8px rgba(255,255,255,0.10))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.12))',
-                    transition: 'transform 0.3s ease',
-                    '&:hover': { transform: 'scale(1.08)' }
+                    fontWeight: 700,
+                    fontSize: { xs: '1.1rem', md: '1.3rem' },
+                    color: c.primary,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase'
                   }}
-                />
+                >
+                  Community Partners
+                </Typography>
                 <Box
-                  component='img'
-                  src='/sponsors/mayor.png'
-                  alt='Mayor - Community Partner'
                   sx={{
-                    width: { xs: 140, sm: 170, md: 200 },
-                    height: 'auto',
-                    objectFit: 'contain',
-                    filter: isDark ? 'drop-shadow(0 0 8px rgba(255,255,255,0.10))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.12))',
-                    transition: 'transform 0.3s ease',
-                    '&:hover': { transform: 'scale(1.08)' }
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: { xs: 2, sm: 3, md: 5 },
+                    flex: 1
                   }}
-                />
+                >
+                  <Box
+                    component='img'
+                    src='/sponsors/shekunj.png'
+                    alt='Shekunj - Community Partner'
+                    sx={{
+                      width: { xs: 140, sm: 170, md: 250 },
+                      height: 'auto',
+                      objectFit: 'contain',
+                      filter: isDark ? 'drop-shadow(0 0 8px rgba(255,255,255,0.10))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.12))',
+                      transition: 'transform 0.3s ease',
+                      '&:hover': { transform: 'scale(1.08)' }
+                    }}
+                  />
+                  <Box
+                    component='img'
+                    src='/sponsors/mayor.png'
+                    alt='Mayor - Community Partner'
+                    sx={{
+                      width: { xs: 140, sm: 170, md: 200 },
+                      height: 'auto',
+                      objectFit: 'contain',
+                      filter: isDark ? 'drop-shadow(0 0 8px rgba(255,255,255,0.10))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.12))',
+                      transition: 'transform 0.3s ease',
+                      '&:hover': { transform: 'scale(1.08)' }
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              {/* Right: Nutrition Partner - Sanchi */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: { md: 1 } }}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: '1.1rem', md: '1.3rem' },
+                    color: c.primary,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Nutrition Partner
+                </Typography>
+                {/* Logo wrapper — grows to fill remaining column height so logo aligns with centre */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                  <Box
+                    component='img'
+                    src='/sponsors/SANCHI__1__page-0001-removebg-preview.png'
+                    alt='Nutrition Partner - Sanchi'
+                    sx={{
+                      width: { xs: 140, sm: 170, md: 200 },
+                      height: 'auto',
+                      objectFit: 'contain',
+                      filter: isDark ? 'drop-shadow(0 0 8px rgba(255,255,255,0.10))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.12))',
+                      transition: 'transform 0.3s ease',
+                      '&:hover': { transform: 'scale(1.08)' }
+                    }}
+                  />
+                </Box>
               </Box>
             </Box>
           </MotionBox>
